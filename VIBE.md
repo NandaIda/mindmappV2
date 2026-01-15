@@ -333,8 +333,6 @@ You are an expert Angular developer working on the MindMap app:
 - Mock Github link and use website url https://mindm.app
 - Build project and check errors, run in the /app directory: ng build
 
-# INPROGRESS
-
 You are an expert Web developer with Angular knowledge working on the MindMapp mind mapping app:
 - improve @/app/src/index.html
 - add SEO tags based on the MindMapp help in help modal
@@ -346,12 +344,17 @@ You are an expert Web developer with Angular knowledge working on the MindMapp m
 - make sure the robots.txt and sitemap.xml file is added to the angular build
 - Build project and check errors, run in the /app directory: ng build
 
-# TODO
-
 You are an expert Angular developer working on the MindMap app:
 - analyze existing code base in the @/app/src
-- fix issue on android webview: when user selects a node for drag it immediately enters edit mode so dragging is almost impossible
-- adding a node when edit mode is on (while trying to drag) is not possible, clicking add node button does not work on android
-- Build the project and make sure it works, run in the /app directory: ng build
-- The add/remove node issue is still present, cant add or remove a node on android device even when a node is selected
+- Fix paning on touch devices like ipad or mac touchpad
+- change max zoom out to 0.3
+- Limit maximum speed of zooming / panning
+- The problem with map moving effect while zooming in / out is present, lock the position of the cursor on the mindmap so the map is not being moved while zooming / paning
+- Disable background drag during paning / zooming
+- Build project and check errors, run in the /app directory: ng build
+- There is some improvement in usability but the issue with map moving while zooming in out is still present. 
+- Calculate zooming related to the current point of the cursor and zoom area around 
 
+# INPROGRESS
+
+# TODO

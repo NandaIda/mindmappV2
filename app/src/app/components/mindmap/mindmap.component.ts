@@ -84,7 +84,7 @@ import { FileService } from '../../services/file.service';
     const activeElement = document.activeElement as HTMLElement;
     const isEditingNode = activeElement && activeElement.classList.contains('node-content');
     
-    // Also skip shortcuts if the user is typing in any input or textarea
+    // Also skip shortcuts if user is typing in any input or textarea
     const isTypingInInput = activeElement && 
       (activeElement.tagName === 'INPUT' || 
        activeElement.tagName === 'TEXTAREA' ||
@@ -752,8 +752,6 @@ import { FileService } from '../../services/file.service';
     const newScale = Math.min(Math.max(0.3, this.scale + clampedDelta), 3);
     
     if (newScale !== this.scale) {
-      this.isZooming = true;
-      
       // Calculate mouse position relative to viewport
       const rect = this.mindmapContainer?.nativeElement.getBoundingClientRect();
       if (rect) {
@@ -773,7 +771,6 @@ import { FileService } from '../../services/file.service';
       }
       
       this.updateTransform();
-      this.isZooming = false;
     }
   }
   
