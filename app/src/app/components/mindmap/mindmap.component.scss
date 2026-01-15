@@ -12,9 +12,12 @@
   height: 100%;
   position: relative;
   cursor: grab;
-  transition: transform 0.1s ease-out;
   transform-origin: 0 0;
   will-change: transform;
+}
+
+.mindmap-container:not(.panning):not(.dragging):not(.zooming) {
+  transition: transform 0.1s ease-out;
 }
 
 .mindmap-container.panning {

@@ -26,6 +26,7 @@ import { FileService } from '../../services/file.service';
   panX = 0;
   panY = 0;
   isPanning = false;
+  isZooming = false;
   lastPanX = 0;
   lastPanY = 0;
   
@@ -36,6 +37,12 @@ import { FileService } from '../../services/file.service';
   lastTouchedNode: string | null = null;
   TOUCH_DRAG_THRESHOLD = 10; // Minimum pixels to consider as drag (increased for better reliability)
   DOUBLE_TAP_DELAY = 300; // Maximum delay between taps for double-tap
+  
+  // Speed limiting configuration
+  MAX_PAN_SPEED = 50; // Maximum pixels per frame
+  MAX_ZOOM_SPEED = 0.2; // Maximum zoom delta per event
+  ZOOM_SMOOTHING = 0.1; // Smoothing factor for zoom
+  PAN_SMOOTHING = 0.15; // Smoothing factor for pan
   
   // Track if we're attempting to drag (to prevent immediate edit mode)
   isAttemptingDrag = false;
@@ -192,6 +199,9 @@ import { FileService } from '../../services/file.service';
       
       // Select node on touch start
       this.selectNode(nodeId);
+      
+      // Add dragging class to container
+      this.mindmapContainer?.nativeElement.classList.add('dragging');
     } else {
       // For mouse events, start dragging immediately
       clientX = (e as MouseEvent).clientX;
@@ -201,6 +211,9 @@ import { FileService } from '../../services/file.service';
       
       // Select node on mouse down
       this.selectNode(nodeId);
+      
+      // Add dragging class to container
+      this.mindmapContainer?.nativeElement.classList.add('dragging');
     }
 
     this.lastMouseX = clientX;
@@ -449,14 +462,16 @@ import { FileService } from '../../services/file.service';
     // Handle both pinch zoom and single-touch pan
     if (e.touches.length === 2) {
       // Handle pinch gesture
+      this.isZooming = true;
       const currentDistance = this.getTouchDistance(e.touches[0], e.touches[1]);
       const scaleDelta = currentDistance / this.initialDistance;
-      this.scale = Math.min(Math.max(0.5, this.initialScale * scaleDelta), 3);
+      this.scale = Math.min(Math.max(0.3, this.initialScale * scaleDelta), 3);
       this.updateTransform();
+      this.isZooming = false;
       e.preventDefault();
-    } else if (e.touches.length === 1 && !this.isDragging && !this.isAttemptingDrag) {
+    } else if (e.touches.length === 1 && !this.isDragging && !this.isAttemptingDrag && !this.isZooming) {
       // Handle single touch pan (background drag)
-      // Only allow if we're not trying to drag a node
+      // Only allow if we're not trying to drag a node and not zooming
       const touch = e.touches[0];
       
       // Check if touch is on a node
@@ -467,6 +482,7 @@ import { FileService } from '../../services/file.service';
       // 1. If no node is selected - allow drag anywhere on screen
       // 2. If node is selected - only allow drag when not touching a node
       // 3. Never allow if we're attempting to drag a node (prevents conflict)
+      // 4. Never allow if we're zooming (prevents conflict)
       if (!isOnNode || this.appState.selectedNodeId() === null) {
         if (!this.isPanning) {
           this.isPanning = true;
@@ -481,8 +497,13 @@ import { FileService } from '../../services/file.service';
         // Compensate drag speed for current scale
         const deltaX = touch.clientX - this.lastPanX;
         const deltaY = touch.clientY - this.lastPanY;
-        const scaledDeltaX = deltaX / this.scale;
-        const scaledDeltaY = deltaY / this.scale;
+        
+        // Apply speed limiting to prevent too fast panning
+        const clampedDeltaX = Math.max(-this.MAX_PAN_SPEED, Math.min(this.MAX_PAN_SPEED, deltaX));
+        const clampedDeltaY = Math.max(-this.MAX_PAN_SPEED, Math.min(this.MAX_PAN_SPEED, deltaY));
+        
+        const scaledDeltaX = clampedDeltaX / this.scale;
+        const scaledDeltaY = clampedDeltaY / this.scale;
         
         this.panX += scaledDeltaX;
         this.panY += scaledDeltaY;
@@ -565,6 +586,7 @@ import { FileService } from '../../services/file.service';
     this.draggedNodeId = null;
     this.isPanning = false;
     this.mindmapContainer.nativeElement.classList.remove('panning');
+    this.mindmapContainer.nativeElement.classList.remove('dragging');
   }
 
   @HostListener('document:mousemove', ['$event'])
@@ -654,6 +676,7 @@ import { FileService } from '../../services/file.service';
       this.isDragging = false;
       this.draggedNodeId = null;
       this.isTouchDragging = false;
+      this.mindmapContainer.nativeElement.classList.remove('dragging');
       return; // Exit early to prevent node deselection during dragging
     }
     
@@ -724,13 +747,17 @@ import { FileService } from '../../services/file.service';
   }
 
   zoom(delta: number, clientX: number, clientY: number) {
-    const newScale = Math.min(Math.max(0.5, this.scale + delta), 3);
+    // Limit zoom delta to prevent too fast zooming
+    const clampedDelta = Math.max(-this.MAX_ZOOM_SPEED, Math.min(this.MAX_ZOOM_SPEED, delta));
+    const newScale = Math.min(Math.max(0.3, this.scale + clampedDelta), 3);
     
     if (newScale !== this.scale) {
+      this.isZooming = true;
+      
       // Calculate mouse position relative to viewport
       const rect = this.mindmapContainer?.nativeElement.getBoundingClientRect();
       if (rect) {
-        // Calculate the position before zoom
+        // Calculate the position before zoom (world coordinates)
         const xBeforeZoom = (clientX - rect.left - this.panX) / this.scale;
         const yBeforeZoom = (clientY - rect.top - this.panY) / this.scale;
         
@@ -738,6 +765,7 @@ import { FileService } from '../../services/file.service';
         this.scale = newScale;
         
         // Calculate pan adjustment to zoom around mouse position
+        // This locks the cursor position on the mindmap during zoom
         this.panX = clientX - rect.left - xBeforeZoom * this.scale;
         this.panY = clientY - rect.top - yBeforeZoom * this.scale;
       } else {
@@ -745,6 +773,7 @@ import { FileService } from '../../services/file.service';
       }
       
       this.updateTransform();
+      this.isZooming = false;
     }
   }
   
@@ -774,12 +803,18 @@ import { FileService } from '../../services/file.service';
       hostElement.style.backgroundSize = `${scaledSize}px ${scaledSize}px`;
     }
     
-    // Add panning class for cursor styling
+    // Add panning and zooming classes for cursor styling
     if (this.mindmapContainer?.nativeElement) {
       if (this.isPanning) {
         this.mindmapContainer.nativeElement.classList.add('panning');
       } else {
         this.mindmapContainer.nativeElement.classList.remove('panning');
+      }
+      
+      if (this.isZooming) {
+        this.mindmapContainer.nativeElement.classList.add('zooming');
+      } else {
+        this.mindmapContainer.nativeElement.classList.remove('zooming');
       }
     }
   }
@@ -830,8 +865,8 @@ import { FileService } from '../../services/file.service';
     const scale = Math.min(scaleX, scaleY);
 
     // Cap maximum scale at 1.0 to prevent excessive zooming in
-    // Minimum scale remains 0.5 for small maps
-    this.scale = Math.max(0.5, Math.min(1.0, scale));
+    // Minimum scale is 0.3 for small maps
+    this.scale = Math.max(0.3, Math.min(1.0, scale));
 
     // Calculate pan to center the bounding box
     const panX = viewportWidth / 2 - bboxCenterX * this.scale;
