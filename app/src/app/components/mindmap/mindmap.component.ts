@@ -1,5 +1,6 @@
 import { Component, ViewChild, ElementRef, AfterViewInit, Input, HostListener, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { AppStateService } from '../../services/app-state.service';
+import { FileService } from '../../services/file.service';
 
 @Component({
   selector: 'app-mindmap',
@@ -7,7 +8,7 @@ import { AppStateService } from '../../services/app-state.service';
   templateUrl: './mindmap.component.html',
   styleUrl: './mindmap.component.scss'
 })
-export class MindMapComponent implements AfterViewInit, OnDestroy {
+  export class MindMapComponent implements AfterViewInit, OnDestroy {
   @ViewChild('nodesLayer') nodesLayer!: ElementRef<HTMLElement>;
   @ViewChild('svgLayer') svgLayer!: ElementRef<SVGElement>;
   @ViewChild('mindmapContainer') mindmapContainer!: ElementRef<HTMLElement>;
@@ -33,12 +34,21 @@ export class MindMapComponent implements AfterViewInit, OnDestroy {
   initialScale = 1;
   lastTouchEndTime = 0;
   lastTouchedNode: string | null = null;
-  TOUCH_DRAG_THRESHOLD = 5; // Minimum pixels to consider as drag
+  TOUCH_DRAG_THRESHOLD = 10; // Minimum pixels to consider as drag (increased for better reliability)
   DOUBLE_TAP_DELAY = 300; // Maximum delay between taps for double-tap
+  
+  // Track if we're attempting to drag (to prevent immediate edit mode)
+  isAttemptingDrag = false;
+  touchStartTime = 0;
+  lastTouchNodeId: string | null = null;
+  
+  // Track which node is being edited (for iOS keyboard support)
+  editingNodeId: string | null = null;
 
   constructor(
     public appState: AppStateService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private fileService: FileService
   ) {}
 
   ngAfterViewInit() {
@@ -61,6 +71,105 @@ export class MindMapComponent implements AfterViewInit, OnDestroy {
     // No need for manual event listener setup
   }
 
+  @HostListener('document:keydown', ['$event'])
+  onKeyDown(event: KeyboardEvent) {
+    // Check if we're editing text in a node - don't trigger shortcuts when editing
+    const activeElement = document.activeElement as HTMLElement;
+    const isEditingNode = activeElement && activeElement.classList.contains('node-content');
+    
+    // Also skip shortcuts if the user is typing in any input or textarea
+    const isTypingInInput = activeElement && 
+      (activeElement.tagName === 'INPUT' || 
+       activeElement.tagName === 'TEXTAREA' ||
+       activeElement.isContentEditable);
+
+    if (isEditingNode || isTypingInInput) {
+      return;
+    }
+
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const cmdOrCtrl = isMac ? event.metaKey : event.ctrlKey;
+    const shift = event.shiftKey;
+
+    // Handle shortcuts
+    switch (event.key) {
+      case '+':
+      case '=': // For keyboards where + is on the same key as =
+        if (!cmdOrCtrl && !shift) {
+          event.preventDefault();
+          this.addChildNode();
+        }
+        break;
+
+      case '-':
+      case '_': // For keyboards where - is on the same key as _
+        if (!cmdOrCtrl && !shift) {
+          event.preventDefault();
+          this.deleteSelectedNode();
+        }
+        break;
+
+      case 'z':
+      case 'Z':
+        if (cmdOrCtrl && !shift) {
+          event.preventDefault();
+          this.appState.undo();
+        } else if (cmdOrCtrl && shift) {
+          event.preventDefault();
+          this.appState.redo();
+        }
+        break;
+
+      case 'y':
+      case 'Y':
+        if (cmdOrCtrl && !shift) {
+          event.preventDefault();
+          this.appState.redo();
+        }
+        break;
+
+      case 's':
+      case 'S':
+        if (cmdOrCtrl) {
+          event.preventDefault();
+          this.fileService.export();
+        }
+        break;
+
+      case 'o':
+      case 'O':
+        if (cmdOrCtrl) {
+          event.preventDefault();
+          this.uploadMindMap();
+        }
+        break;
+    }
+  }
+
+  /**
+   * Opens file dialog to load a mind map
+   */
+  uploadMindMap(): void {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.mind';
+    input.onchange = (event) => {
+      const files = (event.target as HTMLInputElement).files;
+      if (files && files.length > 0) {
+        this.fileService.import(files[0])
+          .then(() => {
+            // Fit the map view after import
+            this.fitView();
+          })
+          .catch((error) => {
+            console.error('Error importing mind map:', error);
+            alert('Error importing mind map: ' + error.message);
+          });
+      }
+    };
+    input.click();
+  }
+
   startDragNode(e: MouseEvent | TouchEvent, nodeId: string) {
     e.stopPropagation();
     
@@ -77,16 +186,28 @@ export class MindMapComponent implements AfterViewInit, OnDestroy {
       this.isTouchDragging = false;
       this.isDragging = true;
       this.draggedNodeId = nodeId;
+      this.isAttemptingDrag = true;
+      this.touchStartTime = Date.now();
+      this.lastTouchNodeId = nodeId;
+      
+      // Select node on touch start
+      this.selectNode(nodeId);
     } else {
       // For mouse events, start dragging immediately
       clientX = (e as MouseEvent).clientX;
       clientY = (e as MouseEvent).clientY;
       this.isDragging = true;
       this.draggedNodeId = nodeId;
+      
+      // Select node on mouse down
+      this.selectNode(nodeId);
     }
 
     this.lastMouseX = clientX;
     this.lastMouseY = clientY;
+
+    // Start tracking drag for history batching
+    this.appState.startDrag(nodeId);
 
     if ('preventDefault' in e) {
       e.preventDefault();
@@ -95,6 +216,16 @@ export class MindMapComponent implements AfterViewInit, OnDestroy {
 
   selectNode(nodeId: string) {
     this.appState.selectNode(nodeId);
+  }
+
+  /**
+   * Blurs any focused editable node content
+   */
+  blurActiveEdit(): void {
+    const activeElement = document.activeElement;
+    if (activeElement && activeElement.classList.contains('node-content')) {
+      (activeElement as HTMLElement).blur();
+    }
   }
 
   getConnectionPath(parent: any, child: any): string {
@@ -133,6 +264,21 @@ export class MindMapComponent implements AfterViewInit, OnDestroy {
   preventDrag(e: MouseEvent | TouchEvent) {
     e.stopPropagation();
   }
+  
+  /**
+   * Handles click events on node content to enable edit mode
+   */
+  onNodeClick(e: MouseEvent, nodeId: string) {
+    // Prevent default to avoid drag interference
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Select the node
+    this.selectNode(nodeId);
+    
+    // Enable edit mode for this node
+    this.enableEditMode(nodeId);
+  }
 
   onContentEdit(e: Event, nodeId: string) {
     const element = e.target as HTMLElement;
@@ -161,6 +307,32 @@ export class MindMapComponent implements AfterViewInit, OnDestroy {
           contentElement.textContent = node.text;
         }
       }
+      
+      // Exit edit mode
+      this.editingNodeId = null;
+    }
+  }
+  
+  /**
+   * Enables edit mode for a node - sets contenteditable and focuses
+   * This is crucial for iOS keyboard support
+   */
+  enableEditMode(nodeId: string) {
+    // Set the node as being edited
+    this.editingNodeId = nodeId;
+    
+    // Find the content element
+    const contentElement = document.querySelector(`[data-node-id="${nodeId}"] .node-content`) as HTMLElement;
+    
+    if (contentElement) {
+      // Set contenteditable to true (iOS requires this before focus)
+      contentElement.setAttribute('contenteditable', 'true');
+      
+      // Force a reflow to ensure contenteditable is applied
+      contentElement.offsetHeight;
+      
+      // Focus the element - this will trigger iOS keyboard
+      contentElement.focus();
     }
   }
 
@@ -186,20 +358,38 @@ export class MindMapComponent implements AfterViewInit, OnDestroy {
   handleTouchEnd(e: TouchEvent, nodeId: string) {
     const now = Date.now();
     
+    // Check if this was a tap (not a drag) and we're on the same node
+    const wasTap = !this.isTouchDragging && !this.isAttemptingDrag && 
+                  this.lastTouchNodeId === nodeId && 
+                  (now - this.touchStartTime) < 500;
+    
+    // If we were dragging, reset the drag attempt flag
+    if (this.isAttemptingDrag) {
+      this.isAttemptingDrag = false;
+      this.lastTouchNodeId = null;
+      this.touchStartTime = 0;
+    }
+    
     // Double-tap to focus and select all text
     if (this.lastTouchedNode === nodeId && this.lastTouchEndTime > 0 && 
         now - this.lastTouchEndTime < this.DOUBLE_TAP_DELAY) {
-      // This is a double tap - select all text
+      // This is a double tap - enable edit mode and select all text
       e.preventDefault();
       e.stopPropagation();
       
-      const contentElement = document.querySelector(`[data-node-id="${nodeId}"] .node-content`) as HTMLElement;
-      if (contentElement) {
-        const range = document.createRange();
-        range.selectNodeContents(contentElement);
-        const selection = window.getSelection();
-        selection?.removeAllRanges();
-        selection?.addRange(range);
+      if (!this.isTouchDragging) {
+        // Enable edit mode first (crucial for iOS keyboard)
+        this.enableEditMode(nodeId);
+        
+        // Then select all text
+        const contentElement = document.querySelector(`[data-node-id="${nodeId}"] .node-content`) as HTMLElement;
+        if (contentElement) {
+          const range = document.createRange();
+          range.selectNodeContents(contentElement);
+          const selection = window.getSelection();
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+        }
       }
       
       this.lastTouchedNode = null;
@@ -210,6 +400,16 @@ export class MindMapComponent implements AfterViewInit, OnDestroy {
     // This is the first tap
     this.lastTouchedNode = nodeId;
     this.lastTouchEndTime = now;
+    
+    // If it was a single tap (not a drag), enable edit mode for the node
+    if (wasTap) {
+      // Enable edit mode after a small delay to allow the tap to complete
+      setTimeout(() => {
+        if (!this.isTouchDragging) {
+          this.enableEditMode(nodeId);
+        }
+      }, 50);
+    }
     
     // Set timeout to reset if second tap doesn't come
     setTimeout(() => {
@@ -254,8 +454,9 @@ export class MindMapComponent implements AfterViewInit, OnDestroy {
       this.scale = Math.min(Math.max(0.5, this.initialScale * scaleDelta), 3);
       this.updateTransform();
       e.preventDefault();
-    } else if (e.touches.length === 1 && !this.isDragging) {
+    } else if (e.touches.length === 1 && !this.isDragging && !this.isAttemptingDrag) {
       // Handle single touch pan (background drag)
+      // Only allow if we're not trying to drag a node
       const touch = e.touches[0];
       
       // Check if touch is on a node
@@ -265,6 +466,7 @@ export class MindMapComponent implements AfterViewInit, OnDestroy {
       // Allow background dragging:
       // 1. If no node is selected - allow drag anywhere on screen
       // 2. If node is selected - only allow drag when not touching a node
+      // 3. Never allow if we're attempting to drag a node (prevents conflict)
       if (!isOnNode || this.appState.selectedNodeId() === null) {
         if (!this.isPanning) {
           this.isPanning = true;
@@ -314,14 +516,17 @@ export class MindMapComponent implements AfterViewInit, OnDestroy {
     // Check if click is on background (not on a node)
     const targetElement = e.target as HTMLElement;
     const isOnNode = targetElement.closest('.node') !== null;
-    
+
     // Allow background dragging in all cases:
     // 1. No node selected - drag anywhere
     // 2. Node selected - drag only when clicking outside the node
     if (!isOnNode) {
       // Cancel node selection when clicking on background
       this.appState.selectedNodeId.set(null);
-      
+
+      // Blur any active edit when clicking outside
+      this.blurActiveEdit();
+
       this.isPanning = true;
       this.lastPanX = e.clientX;
       this.lastPanY = e.clientY;
@@ -352,6 +557,10 @@ export class MindMapComponent implements AfterViewInit, OnDestroy {
   
   @HostListener('document:mouseup')
   onDocumentMouseUp() {
+    // End drag and create history entry if was dragging
+    if (this.isDragging) {
+      this.appState.endDrag();
+    }
     this.isDragging = false;
     this.draggedNodeId = null;
     this.isPanning = false;
@@ -440,6 +649,8 @@ export class MindMapComponent implements AfterViewInit, OnDestroy {
   onDocumentTouchEnd(e: TouchEvent) {
     // Reset dragging state when touch ends
     if (this.isDragging) {
+      // End drag and create history entry if was dragging
+      this.appState.endDrag();
       this.isDragging = false;
       this.draggedNodeId = null;
       this.isTouchDragging = false;
@@ -462,7 +673,8 @@ export class MindMapComponent implements AfterViewInit, OnDestroy {
         const isInNavbarArea = navbarRect && touchEndY > (navbarRect.bottom - 40); // More tolerance
         
         // Check if touch ended on clickable element
-        const isClickableElement = touchedElement?.matches('button, a, [href], [onclick], .btn, [role="button"], [data-action]');
+        const isClickableElement = touchedElement?.matches('button, a, [href], [onclick], .btn, [role="button"], [data-action]') ||
+                                   touchedElement?.closest('.navbar-action-btn') !== null;
         
         // Check if touch ended outside of any node
         const isOutsideNode = !touchedElement?.closest('.node');
@@ -477,12 +689,14 @@ export class MindMapComponent implements AfterViewInit, OnDestroy {
         
         // Only unselect node if ALL these conditions are met:
         // 1. Touch ended outside of any node
-        // 2. Not in navbar area 
+        // 2. Not in navbar area
         // 3. Not on clickable elements
         // 4. Not dragging
         // 5. Touch didn't start on a node
         if (isOutsideNode && !this.isTouchDragging && !isClickableElement && !isInNavbarArea && !this.touchStartedOnNode) {
           this.appState.selectedNodeId.set(null);
+          // Blur any active edit when touching outside
+          this.blurActiveEdit();
         }
         
         // Reset touch tracking state
@@ -543,6 +757,21 @@ export class MindMapComponent implements AfterViewInit, OnDestroy {
   updateTransform() {
     if (this.mindmapContainer?.nativeElement) {
       this.mindmapContainer.nativeElement.style.transform = `translate(${this.panX}px, ${this.panY}px) scale(${this.scale})`;
+    }
+    
+    // Update background on :host element to compensate for panning
+    // This ensures the dotted background stays fixed in viewport coordinates
+    const hostElement = this.mindmapContainer?.nativeElement.parentElement;
+    if (hostElement) {
+      const bgPosX = -this.panX / this.scale;
+      const bgPosY = -this.panY / this.scale;
+      hostElement.style.backgroundPosition = `${bgPosX}px ${bgPosY}px`;
+      
+      // Update background size to scale with zoom
+      // This ensures dot spacing follows the current scale
+      const baseSize = 20; // Base size from CSS (20px 20px)
+      const scaledSize = baseSize * this.scale;
+      hostElement.style.backgroundSize = `${scaledSize}px ${scaledSize}px`;
     }
     
     // Add panning class for cursor styling

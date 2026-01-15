@@ -3,14 +3,14 @@
   width: 100%;
   height: 100%;
   overflow: hidden;
+  background-image: radial-gradient(var(--dot-color) 1px, transparent 1px);
+  background-size: 20px 20px;
 }
 
 .mindmap-container {
   width: 100%;
   height: 100%;
   position: relative;
-  background-image: radial-gradient(var(--dot-color) 1px, transparent 1px);
-  background-size: 20px 20px;
   cursor: grab;
   transition: transform 0.1s ease-out;
   transform-origin: 0 0;
@@ -51,7 +51,7 @@
   min-height: 30px;
   padding: 8px 12px;
   background: #ffffff;
-  border: 2px solid #e5e7eb;
+  border: 2px solid #3b82f6; /* Changed to more visible blue */
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
   cursor: move;
@@ -59,9 +59,20 @@
 }
 
 .node.selected {
-  border-color: #4a90e2;
-  box-shadow: 0 0 0 4px rgba(74, 144, 226, 0.2);
+  border-color: #f97316; /* Changed to orange */
+  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.2); /* Orange glow */
   z-index: 100;
+}
+
+.node.editing {
+  border-color: #10b981; /* Green border when editing */
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.3); /* Green glow when editing */
+  z-index: 101; /* Higher than selected */
+}
+
+.root-node {
+  font-weight: bold; /* Bold text for root node */
+  font-size: 1.1em; /* Slightly larger font for better visibility */
 }
 
 .node-content {

@@ -215,3 +215,143 @@ You are an expert Angular developer working on the MindMap app:
 - Dockerfile should install dependencies and build the Angular application from the /app folder
 - Docker must expose HTTP server listening at port :8080
 - docker-compose should run the built docker container and map localhost:8080 to container:8080 port
+
+You are an expert Angular developer working on the MindMap app:
+- analyze existing code base in the @/app/src
+- work on the tasks from the @/TODO.md, when a task is completed, mark it as done.
+<todo>
+0001; [x] - Improve node visibility, create a 1px thin border around the node by default
+0002; [x] - The root node should have bold text with slightly bigger font for better visibility
+0003; [x] - on mobile devices, when user finger is close to a node edge the app does not recognize that as an attempt to drag the node, instead the background drag happens, fix this behaviour and make it easier for user to drag a node even if the button is close but not exactly on the node area
+0004; [x] -  when user clicks or taps on a node it enters the edit mode, but when user clicks outside of a node the edit mode should be turned off and node should be unselected
+</todo>
+- Build the project and make sure it works, run in the /app directory: ng build
+- The issue with hit area is not completely solved. On desktop and ios it works well but on android it is now more difficult to catch a node edge and move the node.
+- Revert the last android change, the issue is the following: on android the node drag attempt conflicts with background drag, node is often selected for a moment but then immediately unselected and background is being dragged instead of the node
+(Reverted, too many changes)
+
+You are an expert Angular developer working on the MindMap app:
+- analyze existing code base in the @/app/src
+- Improve node visibility, create a 2px thin border around the node by default in a more visible colour like blue
+- Change selected node border color to orange
+- The root node should have bold text with slightly bigger font for better visibility
+- Build the project and make sure it works, run in the /app directory: ng build
+
+You are an expert Angular developer working on the MindMap app:
+- analyze existing code base in the @/app/src
+- when user clicks or taps on a node it enters the edit mode, but when user clicks outside of a node the edit mode should be turned off and node should be unselected
+- Build the project and make sure it works, run in the /app directory: ng build
+
+You are an expert Angular developer working on the MindMap app:
+- analyze existing code base in the @/app/src
+- implement a complete undo/redo feature for map nodes
+- the undo and redo must remember last 50 changes
+- add Undo and Redo buttons to the navbar
+- The history for undo and redo should only keep the final state of the node, for example: a node that is being moved should not be saved untill the node drag is complete.
+- Build the project and make sure it works, run in the /app directory: ng build
+- Undo and Redo buttons are missing in the navbar html
+
+You are an expert Angular developer working on the MindMap app:
+- analyze existing code base in the @/app/src
+- Undo and Redo works, but it keeps the drag of the element, it should not save the node when being dragged
+- Reset map should be reversable to the state before reset
+- Build the project and make sure it works, run in the /app directory: ng build
+
+You are an expert Angular developer working on the MindMap app:
+- analyze existing code base in the @/app/src
+- create a circular button in the top left cornet with burger icon
+- create a banner logo with bold text "MindMapp" next to the button, to the right
+- the button must trigger a dropdown context menu
+- use NgbDropdown
+- move he Save, Load, Help and Reset button from the Navbar to the dropdown menu
+- Leave the existing bottom navbar as is, the new burger button is a separate navigation
+- The top right button is a free floating button, do not create a top navigation bar
+- The MindMapp logo should be a "background" next to it, must have lower z-index than mindmap nodes
+- Build the project and make sure it works, run in the /app directory: ng build
+
+You are an expert Angular developer working on the MindMap app:
+- analyze existing code base in the @/app/src
+- implement keyboard shortcuts for the MindMap actions
+- key '+' create a new node when a node is selected
+- key '-' delete the selected node
+- Ctrl+Z (Undo) and Ctrl+Y (Redo) on Windows
+- Cmd+Z (Undo) and Cmd+Shift+Z (Redo) on Mac
+- ctrl+s / cmd+s save (download) mindmap
+- ctrl+o / cmd+o load (upload) mindmap
+- Build the project and make sure it works, run in the /app directory: ng build
+
+You are an expert Angular developer working on the MindMap app:
+- analyze existing code base in the @/app/src
+- fix issue on android webview: when user selects a node for drag it immediately enters edit mode so dragging is almost impossible
+- adding a node when edit mode is on (while trying to drag) is not possible, clicking add node button does not work on android
+- The add/remove node issue, cant add or remove a node on android device even when a node is selected
+- on android the node drag attempt conflicts with background drag, node is often selected for a moment but then immediately unselected and background is being dragged instead of the node
+- Build the project and make sure it works, run in the /app directory: ng build
+
+You are an expert Angular developer working on the MindMap app:
+- analyze existing code base in the @/app/src
+- improve the usability of the node editing, user must click or tap on a node to enable the title editing
+- note, that on ios there is a issue with .focus() which does not show onscreen keyboard unless there is user intent to edit content
+- Build the project and make sure it works, run in the /app directory: ng build
+- Edit does not work at all now on any platform (desktop, android, ios)
+
+You are an expert Angular developer working on the MindMap app:
+- analyze existing code base in the @/app/src
+- the mindmap component has a layer with a dotted background, however after draging viewport the div is positioned off the original position and the dotted background is not displayed on the new visible area, fix this and make sure the dotted background is always present in the whole visible area, dots distanse must follow current scale
+- Build the project and make sure it works, run in the /app directory: ng build
+- The issue remains, perhaps, remove the background from the layers inside minidmap component and apply background to the :host element of the mindmap component, adjust the dot dimensions for scale
+
+You are an expert Angular developer working on the MindMap app:
+- analyze existing code base in the @/app/src
+- apply a similar CSS fix to hide the arrow down after the burger icon in the burger button
+// Hide dropdown icon
+.navbar .dropdown-toggle::after {
+  display: none;
+}
+- Build the project and make sure it works, run in the /app directory: ng build
+
+You are an expert Angular developer working on the MindMap app:
+- analyze existing code base in the @/app/src
+- use the Poppins font in the brand name (MindMapp) next to the burger button
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+- Build the project and make sure it works, run in the /app directory: ng build
+- Improve .logo-text class in burger button, make the font-size 1rem on mobile screens.
+
+You are an expert Angular developer working on the MindMap app:
+- analyze existing code base in the @/app/src
+- In the burger button dropdown menu, move the help button to the last positio
+- add a dropdown-divider before the help button
+- Build the project and make sure it works, run in the /app directory: ng build
+
+You are an expert Angular developer working on the MindMap app:
+- analyze existing code base in the @/app/src
+- Write the help content in the help modal.
+- Briefly describe the idea of the Mind Map application.
+- Write keyboard shortcuts.
+- Mock Github link and use website url https://mindm.app
+- Build project and check errors, run in the /app directory: ng build
+
+# INPROGRESS
+
+You are an expert Web developer with Angular knowledge working on the MindMapp mind mapping app:
+- improve @/app/src/index.html
+- add SEO tags based on the MindMapp help in help modal
+- Home url is https://mindm.app
+- Create extra seo tags for social integration with Facebook, Twitter, Linkedin, etc
+- Assume the og:image will be in the ogimage.jpg file
+- Create robots.txt in /app/public 
+- Create sitemap.xml in /app/public
+- make sure the robots.txt and sitemap.xml file is added to the angular build
+- Build project and check errors, run in the /app directory: ng build
+
+# TODO
+
+You are an expert Angular developer working on the MindMap app:
+- analyze existing code base in the @/app/src
+- fix issue on android webview: when user selects a node for drag it immediately enters edit mode so dragging is almost impossible
+- adding a node when edit mode is on (while trying to drag) is not possible, clicking add node button does not work on android
+- Build the project and make sure it works, run in the /app directory: ng build
+- The add/remove node issue is still present, cant add or remove a node on android device even when a node is selected
+

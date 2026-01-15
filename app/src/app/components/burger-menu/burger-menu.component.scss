@@ -1,0 +1,111 @@
+:host {
+  display: block;
+  position: relative;
+}
+
+/* Logo banner - positioned as background element */
+.logo-banner {
+  position: fixed;
+  top: 20px;
+  left: 70px;
+  z-index: 0; /* Lower than mindmap nodes */
+  pointer-events: none; /* Allow clicks to pass through to mindmap */
+  
+  .logo-text {
+    font-size: 1.4rem;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
+    color: #6c757d;
+    opacity: 0.6;
+    letter-spacing: -1px;
+    line-height: 45px;
+
+    @media (max-width: 768px) {
+      font-size: 1.2rem;
+    }
+  }
+}
+
+/* Burger menu container */
+.burger-menu {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 1000; /* High z-index to ensure it's above everything */
+}
+
+/* Circular burger button */
+.burger-btn {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  border: 2px solid #dee2e6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  color: #495057;
+
+  &:hover {
+    background-color: #f8f9fa;
+    border-color: #adb5bd;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transform: scale(1.05);
+  }
+
+  &:active {
+    transform: scale(0.95);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);
+  }
+}
+
+/* Hide dropdown arrow */
+.burger-btn.dropdown-toggle::after {
+  display: none;
+}
+
+/* Dropdown menu styling */
+.dropdown-menu {
+  min-width: 150px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  border: none;
+  padding: 0.5rem 0;
+  margin-top: 0.5rem;
+
+  .dropdown-item, ngb-highlight {
+    padding: 0.6rem 0.8rem !important;
+    font-size: 1rem !important;
+  }
+
+  button {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+    color: #212529;
+    transition: background-color 0.15s ease;
+
+    &:hover {
+      background-color: #f8f9fa;
+    }
+
+    &:active {
+      background-color: #e9ecef;
+    }
+
+    i {
+      font-size: 1rem;
+      width: 1.25rem;
+      text-align: center;
+    }
+  }
+}

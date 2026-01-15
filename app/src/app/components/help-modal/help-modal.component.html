@@ -1,14 +1,76 @@
 <div class="modal-header">
-  <h4 class="modal-title">Help</h4>
+  <h4 class="modal-title">Help & Instructions</h4>
   <button type="button" class="btn-close" aria-label="Close" (click)="close()"></button>
 </div>
 <div class="modal-body">
   <p><strong>Welcome to MindMapp!</strong></p>
-  <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam in dui mauris. Vivamus hendrerit arcu sed erat molestie vehicula. Sed auctor neque eu tellus rhoncus ut eleifend nibh porttitor. Ut in nulla enim. Phasellus molestie magna non est bibendum non venenatis nisl tempor.</p>
+  <p>MindMapp is an intuitive mind mapping application that helps you organize your thoughts, brainstorm ideas, and create visual representations of your thoughts. With drag-and-drop functionality, keyboard shortcuts, and seamless import/export capabilities, MindMapp makes it easy to capture and develop your ideas.</p>
 
-  <p>Suspendisse potenti. Sed egestas, ante et sodales cras lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam in dui mauris. Vivamus hendrerit arcu sed erat molestie vehicula. Sed auctor neque eu tellus rhoncus ut eleifend nibh porttitor. Ut in nulla enim. Phasellus molestie magna non est bibendum non venenatis nisl tempor.</p>
+  <h5>Getting Started</h5>
+  <ul>
+    <li><strong>Create nodes:</strong> Click the "Add" button in the bottom navbar or use the <kbd>+</kbd> key</li>
+    <li><strong>Edit nodes:</strong> Double-click on any node to edit its text</li>
+    <li><strong>Move nodes:</strong> Click and drag any node to reposition it</li>
+    <li><strong>Delete nodes:</strong> Select a node and click "Del" button or press <kbd>-</kbd></li>
+    <li><strong>Navigate:</strong> Use mouse wheel to zoom, click and drag on empty space to pan</li>
+  </ul>
 
-  <p>Suspendisse potenti. Sed egestas, ante et sodales cras lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam in dui mauris. Vivamus hendrerit arcu sed erat molestie vehicula. Sed auctor neque eu tellus rhoncus ut eleifend nibh porttitor. Ut in nulla enim. Phasellus molestie magna non est bibendum non venenatis nisl tempor.</p>
+  <h5>Keyboard Shortcuts</h5>
+  <table class="table table-sm">
+    <thead>
+      <tr>
+        <th>Action</th>
+        <th>Shortcut</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Add child node</td>
+        <td><kbd>+</kbd> or <kbd>=</kbd></td>
+      </tr>
+      <tr>
+        <td>Delete selected node</td>
+        <td><kbd>-</kbd> or <kbd>_</kbd></td>
+      </tr>
+      <tr>
+        <td>Undo</td>
+        <td><kbd>Ctrl+Z</kbd> (Windows) / <kbd>Cmd+Z</kbd> (Mac)</td>
+      </tr>
+      <tr>
+        <td>Redo</td>
+        <td><kbd>Ctrl+Y</kbd> (Windows) / <kbd>Cmd+Shift+Z</kbd> (Mac)</td>
+      </tr>
+      <tr>
+        <td>Save mindmap</td>
+        <td><kbd>Ctrl+S</kbd> (Windows) / <kbd>Cmd+S</kbd> (Mac)</td>
+      </tr>
+      <tr>
+        <td>Load mindmap</td>
+        <td><kbd>Ctrl+O</kbd> (Windows) / <kbd>Cmd+O</kbd> (Mac)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h5>Features</h5>
+  <ul>
+    <li><strong>Drag & Drop:</strong> Easily move nodes around to organize your mind map</li>
+    <li><strong>Touch Support:</strong> Full support for mobile devices and touchscreens</li>
+    <li><strong>Import/Export:</strong> Save and load your mind maps as .mind files</li>
+    <li><strong>Undo/Redo:</strong> Full history support with up to 50 actions</li>
+    <li><strong>Zoom & Pan:</strong> Navigate large mind maps with ease</li>
+  </ul>
+
+  <h5>Links</h5>
+  <p>
+    <a href="https://github.com/cepa/mindmapp" target="_blank" rel="noopener noreferrer">
+      <i class="fab fa-github me-2"></i>GitHub Repository
+    </a>
+  </p>
+  <p>
+    <a href="https://mindm.app" target="_blank" rel="noopener noreferrer">
+      <i class="fas fa-globe me-2"></i>Official Website
+    </a>
+  </p>
 </div>
 <div class="modal-footer">
   <button type="button" class="btn btn-secondary" (click)="close()">Close</button>

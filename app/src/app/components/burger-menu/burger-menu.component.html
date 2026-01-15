@@ -1,0 +1,39 @@
+<!-- Logo banner (background element) -->
+<div class="logo-banner">
+  <span class="logo-text">MindMapp</span>
+</div>
+
+<!-- Burger menu with dropdown -->
+<div ngbDropdown class="burger-menu" placement="bottom-start">
+  <button class="burger-btn rounded-circle" ngbDropdownToggle>
+    <i class="fas fa-bars"></i>
+  </button>
+  
+  <ul ngbDropdownMenu class="dropdown-menu">
+    <li>
+      <button ngbDropdownItem (click)="downloadMindMap()">
+        <i class="fas fa-download me-2"></i>
+        Save
+      </button>
+    </li>
+    <li>
+      <button ngbDropdownItem (click)="uploadMindMap()">
+        <i class="fas fa-upload me-2"></i>
+        Load
+      </button>
+    </li>
+    <li>
+      <button ngbDropdownItem (click)="resetMap()">
+        <i class="fas fa-trash-alt me-2"></i>
+        Reset
+      </button>
+    </li>
+    <li class="dropdown-divider"></li>
+    <li>
+      <button ngbDropdownItem (click)="showHelp()">
+        <i class="fas fa-question-circle me-2"></i>
+        Help
+      </button>
+    </li>
+  </ul>
+</div>

@@ -14,20 +14,20 @@
         [attr.data-node-id]="node.id"
         [class.root-node]="node.parentId === null"
         [class.selected]="appState.selectedNodeId() === node.id"
+        [class.editing]="editingNodeId === node.id"
         [style.left.px]="node.x"
         [style.top.px]="node.y"
-        (mousedown)="startDragNode($event, node.id); selectNode(node.id)"
-        (touchstart)="startDragNode($event, node.id); selectNode(node.id)"
+        (mousedown)="startDragNode($event, node.id)"
+        (touchstart)="startDragNode($event, node.id)"
         (touchend)="handleTouchEnd($event, node.id)"
       >
         <div
           class="node-content"
-          [attr.contenteditable]="'true'"
+          [attr.contenteditable]="editingNodeId === node.id ? 'true' : 'false'"
           (input)="onContentEdit($event, node.id)"
           (blur)="finishEditNode(node.id)"
           (keydown)="handleEditKeyDown($event, node.id)"
-          (mousedown)="preventDrag($event); selectNode(node.id)"
-          (touchstart)="preventDrag($event); selectNode(node.id)"
+          (click)="onNodeClick($event, node.id)"
         >{{ node.text }}</div>
       </div>
     }
