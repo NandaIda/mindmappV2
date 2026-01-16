@@ -1,4 +1,4 @@
-  <div #mindmapContainer class="mindmap-container" (mousedown)="appState.selectedNodeId.set(null)">
+  <div #mindmapContainer class="mindmap-container" [class.keyboard-navigating]="isKeyboardNavigating">
   <svg #svgLayer class="connections">
     @for (conn of appState.getConnections(); track conn.child.id) {
       <path
@@ -13,10 +13,22 @@
         class="node"
         [attr.data-node-id]="node.id"
         [class.root-node]="node.parentId === null"
-        [class.selected]="appState.selectedNodeId() === node.id"
+        [class.selected]="appState.selectedNodeId() === node.id && !appState.isNodeSelected(node.id)"
+        [class.multi-selected]="appState.isNodeSelected(node.id)"
+        [class.focused]="appState.selectedNodeId() === node.id && appState.isNodeSelected(node.id)"
         [class.editing]="editingNodeId === node.id"
+        [class.shape-rect]="node.style?.shape === 'rect'"
+        [class.shape-rounded]="!node.style?.shape || node.style?.shape === 'rounded'"
+        [class.shape-pill]="node.style?.shape === 'pill'"
+        [class.shape-diamond]="node.style?.shape === 'diamond'"
         [style.left.px]="node.x"
         [style.top.px]="node.y"
+        [style.font-weight]="node.style?.fontWeight"
+        [style.font-style]="node.style?.fontStyle"
+        [style.background-color]="node.style?.backgroundColor"
+        [style.color]="node.style?.color"
+        [style.border-color]="node.style?.color ? node.style?.color : ''"
+        (click)="onNodeClick($event, node.id)"
         (mousedown)="startDragNode($event, node.id)"
         (touchstart)="startDragNode($event, node.id)"
         (touchend)="handleTouchEnd($event, node.id)"
@@ -24,11 +36,19 @@
         <div
           class="node-content"
           [attr.contenteditable]="editingNodeId === node.id ? 'true' : 'false'"
-          (input)="onContentEdit($event, node.id)"
+          [attr.data-placeholder]="node.parentId === null ? 'New Idea' : 'New Idea'"
           (blur)="finishEditNode(node.id)"
           (keydown)="handleEditKeyDown($event, node.id)"
-          (click)="onNodeClick($event, node.id)"
+          (dblclick)="onNodeDblClick($event, node.id)"
         >{{ node.text }}</div>
+
+        <!-- Quick Add Handles -->
+        <div class="node-handles">
+          <div class="handle handle-top" (click)="addChildNode(node.id, 'top'); $event.stopPropagation()">+</div>
+          <div class="handle handle-right" (click)="addChildNode(node.id, 'right'); $event.stopPropagation()">+</div>
+          <div class="handle handle-bottom" (click)="addChildNode(node.id, 'bottom'); $event.stopPropagation()">+</div>
+          <div class="handle handle-left" (click)="addChildNode(node.id, 'left'); $event.stopPropagation()">+</div>
+        </div>
       </div>
     }
   </div>

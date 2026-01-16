@@ -3,16 +3,18 @@
   <button type="button" class="btn-close" aria-label="Close" (click)="close()"></button>
 </div>
 <div class="modal-body">
-  <p><strong>Welcome to MindMapp!</strong></p>
-  <p>MindMapp is an intuitive mind mapping application that helps you organize your thoughts, brainstorm ideas, and create visual representations of your thoughts. With drag-and-drop functionality, keyboard shortcuts, and seamless import/export capabilities, MindMapp makes it easy to capture and develop your ideas.</p>
+  <p><strong>Welcome to MindMapp V2!</strong></p>
+  <p>MindMapp V2 is an intuitive mind mapping application that helps you organize your thoughts, brainstorm ideas, and create visual representations of your thoughts. With drag-and-drop functionality, keyboard shortcuts, and seamless import/export capabilities, MindMapp makes it easy to capture and develop your ideas.</p>
 
-  <h5>Getting Started</h5>
+  <h5>Fully Keyboard-Driven Workflow</h5>
+  <p><strong>MindMapp V2 is designed for complete keyboard control - you can do everything without ever touching the mouse!</strong></p>
   <ul>
-    <li><strong>Create nodes:</strong> Click the "Add" button in the bottom navbar or use the <kbd>+</kbd> key</li>
-    <li><strong>Edit nodes:</strong> Double-click on any node to edit its text</li>
-    <li><strong>Move nodes:</strong> Click and drag any node to reposition it</li>
-    <li><strong>Delete nodes:</strong> Select a node and click "Del" button or press <kbd>-</kbd></li>
-    <li><strong>Navigate:</strong> Use mouse wheel to zoom, click and drag on empty space to pan</li>
+    <li><strong>Navigate:</strong> Arrow keys to move between nodes spatially</li>
+    <li><strong>Quick Create:</strong> Shift + Arrow to instantly add child nodes in any direction</li>
+    <li><strong>Multi-Select:</strong> Press <kbd>M</kbd> to mark nodes, then operate on all marked nodes together</li>
+    <li><strong>Edit:</strong> Double-click, Enter, or F2 to edit any node</li>
+    <li><strong>Style:</strong> Shift+C for colors, Shift+S for shapes, Ctrl+B for bold, Ctrl+I for italic</li>
+    <li><strong>Move:</strong> Ctrl + Arrow to precisely position nodes or groups</li>
   </ul>
 
   <h5>Keyboard Shortcuts</h5>
@@ -25,12 +27,96 @@
     </thead>
     <tbody>
       <tr>
-        <td>Add child node</td>
+        <td colspan="2" class="table-active"><strong>Fast Flow Navigation</strong></td>
+      </tr>
+      <tr>
+        <td>Navigate</td>
+        <td><kbd>Arrow Keys</kbd></td>
+      </tr>
+      <tr>
+        <td>Precision Move Node</td>
+        <td><kbd>Ctrl</kbd> + <kbd>Arrow Key</kbd></td>
+      </tr>
+      <tr>
+        <td>Create Child in Direction</td>
+        <td><kbd>Shift</kbd> + <kbd>Arrow Key</kbd></td>
+      </tr>
+      <tr>
+        <td>Auto-Add Child</td>
+        <td><kbd>Tab</kbd></td>
+      </tr>
+      <tr>
+        <td>Edit Node</td>
+        <td><kbd>Double-click</kbd>, <kbd>Enter</kbd> or <kbd>F2</kbd></td>
+      </tr>
+      <tr>
+        <td>Show Help</td>
+        <td><kbd>Ctrl+K</kbd></td>
+      </tr>
+      <tr>
+        <td colspan="2" class="table-active"><strong>Multi-Select (Keyboard Only!)</strong></td>
+      </tr>
+      <tr>
+        <td>Mark/Unmark Node</td>
+        <td><kbd>M</kbd> (Toggle current node in selection)</td>
+      </tr>
+      <tr>
+        <td>Select All</td>
+        <td><kbd>Ctrl+A</kbd> / <kbd>Cmd+A</kbd></td>
+      </tr>
+      <tr>
+        <td>Clear Selection</td>
+        <td><kbd>Escape</kbd></td>
+      </tr>
+      <tr>
+        <td>Multi-Select with Mouse</td>
+        <td><kbd>Ctrl+Click</kbd> / <kbd>Cmd+Click</kbd> to toggle nodes</td>
+      </tr>
+      <tr>
+        <td colspan="2" class="text-muted small">
+          <em>Note: When multiple nodes are selected (green checkmark ✓), all operations (delete, color, shape, move) apply to all selected nodes. Drag any selected node to move all together!</em>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" class="table-active"><strong>Styling & Customization</strong></td>
+      </tr>
+      <tr>
+        <td>Toggle Bold</td>
+        <td><kbd>Ctrl</kbd> + <kbd>B</kbd></td>
+      </tr>
+      <tr>
+        <td>Toggle Italic</td>
+        <td><kbd>Ctrl</kbd> + <kbd>I</kbd></td>
+      </tr>
+      <tr>
+        <td>Cycle Shape</td>
+        <td><kbd>Shift</kbd> + <kbd>S</kbd></td>
+      </tr>
+      <tr>
+        <td>Cycle Color</td>
+        <td><kbd>Shift</kbd> + <kbd>C</kbd></td>
+      </tr>
+      <tr>
+        <td colspan="2" class="table-active"><strong>View Control</strong></td>
+      </tr>
+      <tr>
+        <td>Center Selection</td>
+        <td><kbd>Space</kbd></td>
+      </tr>
+      <tr>
+        <td>Reset View</td>
+        <td><kbd>0</kbd></td>
+      </tr>
+      <tr>
+        <td colspan="2" class="table-active"><strong>Standard Controls</strong></td>
+      </tr>
+      <tr>
+        <td>Add child node (Dialog)</td>
         <td><kbd>+</kbd> or <kbd>=</kbd></td>
       </tr>
       <tr>
         <td>Delete selected node</td>
-        <td><kbd>-</kbd> or <kbd>_</kbd></td>
+        <td><kbd>Delete</kbd>, <kbd>Backspace</kbd> or <kbd>-</kbd></td>
       </tr>
       <tr>
         <td>Undo</td>
@@ -53,22 +139,34 @@
 
   <h5>Features</h5>
   <ul>
-    <li><strong>Drag & Drop:</strong> Easily move nodes around to organize your mind map</li>
-    <li><strong>Touch Support:</strong> Full support for mobile devices and touchscreens</li>
+    <li><strong>100% Keyboard Control:</strong> Navigate, create, edit, and style nodes entirely with keyboard - no mouse required!</li>
+    <li><strong>Multi-Select:</strong> Mark multiple nodes with 'M' key and operate on them together (delete, style, move)</li>
+    <li><strong>Smooth Touchpad:</strong> True diagonal two-finger panning with balanced speeds, Ctrl+Scroll for zoom</li>
+    <li><strong>Style Inheritance:</strong> Shift+Arrow creates children that inherit parent's colors and shapes</li>
+    <li><strong>Smart Navigation:</strong> Hover effects hide during keyboard navigation for distraction-free flow</li>
+    <li><strong>Touch Support:</strong> Full support for mobile devices and touchscreens with pinch-to-zoom</li>
     <li><strong>Import/Export:</strong> Save and load your mind maps as .mind files</li>
     <li><strong>Undo/Redo:</strong> Full history support with up to 50 actions</li>
-    <li><strong>Zoom & Pan:</strong> Navigate large mind maps with ease</li>
+    <li><strong>Zoom & Pan:</strong> Navigate large mind maps with ease using mouse, touchpad, or touch</li>
+  </ul>
+
+  <h5>Visual Indicators</h5>
+  <ul>
+    <li><strong>Amber border:</strong> Current keyboard focus (where arrow keys will navigate from)</li>
+    <li><strong>Green border + ✓:</strong> Multi-selected nodes (marked with 'M' key)</li>
+    <li><strong>Blue border:</strong> Keyboard focus within multi-selection</li>
+    <li><strong>Purple border:</strong> Node in edit mode (typing)</li>
   </ul>
 
   <h5>Links</h5>
   <p>
     <a href="https://github.com/cepa/mindmapp" target="_blank" rel="noopener noreferrer">
-      <i class="fab fa-github me-2"></i>GitHub Repository
+      <i class="fab fa-github me-2"></i>Original Mindmapp GitHub Repository
     </a>
   </p>
   <p>
-    <a href="https://mindm.app" target="_blank" rel="noopener noreferrer">
-      <i class="fas fa-globe me-2"></i>Official Website
+    <a href="https://github.com/NandaIda/mindmappV2" target="_blank" rel="noopener noreferrer">
+      <i class="fab fa-github me-2"></i>Mindmapp V2 GitHub Repository
     </a>
   </p>
 </div>

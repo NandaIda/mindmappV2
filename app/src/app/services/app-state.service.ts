@@ -1,6 +1,14 @@
 import { Injectable, signal } from '@angular/core';
 
-interface MindMapNode {
+export interface NodeStyle {
+  fontWeight?: string;
+  fontStyle?: string;
+  shape?: 'rect' | 'rounded' | 'pill' | 'diamond';
+  backgroundColor?: string;
+  color?: string;
+}
+
+export interface MindMapNode {
   id: string;
   text: string;
   x: number;
@@ -8,6 +16,7 @@ interface MindMapNode {
   parentId: string | null;
   width?: number;
   height?: number;
+  style?: NodeStyle;
 }
 
 interface HistoryEntry {
@@ -22,7 +31,8 @@ interface HistoryEntry {
 })
 export class AppStateService {
   nodes = signal<MindMapNode[]>([]);
-  selectedNodeId = signal<string | null>(null);
+  selectedNodeId = signal<string | null>(null); // Focused node for keyboard navigation
+  selectedNodeIds = signal<Set<string>>(new Set()); // Multi-select support
   nodesLoadedFromStorage = false;
 
   // Undo/redo functionality
@@ -121,7 +131,7 @@ export class AppStateService {
     // Create root node in the center
     const rootNode: MindMapNode = {
       id: this.generateId(),
-      text: 'Central Topic',
+      text: '',
       x: viewportWidth / 2 - 75,
       y: viewportHeight / 2 - 25,
       parentId: null
@@ -129,7 +139,8 @@ export class AppStateService {
 
     this.nodes.update(nodes => [...nodes, rootNode]);
     this.selectedNodeId.set(rootNode.id);
-    
+    this.selectedNodeIds.set(new Set()); // Don't add to multi-select by default
+
     // Add to history
     this.addToHistory('create', nodesBefore);
 
@@ -140,30 +151,114 @@ export class AppStateService {
     return 'node-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
   }
 
-  addChildNode(parentId: string): MindMapNode | null {
+  addChildNode(parentId: string, direction?: 'top' | 'bottom' | 'left' | 'right'): MindMapNode | null {
     const parent = this.nodes().find(n => n.id === parentId);
     if (!parent) return null;
 
     // Save current state before modification
     const nodesBefore = [...this.nodes()];
 
-    // Generate random position around parent (one of 8 directions)
-    const angle = Math.floor(Math.random() * 8) * (Math.PI / 4); // 0, 45, 90, ... degrees
-    const distance = 120;
-    const newX = parent.x + Math.cos(angle) * distance - 50; // -50 to center horizontally
-    const newY = parent.y + Math.sin(angle) * distance - 20; // -20 to center vertically
+    let newX: number;
+    let newY: number;
+
+    if (direction) {
+      // Add a random offset perpendicular to the direction
+      // This prevents perfectly straight lines and creates beautiful curves
+      const jitter = () => (Math.random() - 0.5) * 160; // +/- 80px offset for more curve
+
+      switch (direction) {
+        case 'right':
+          newX = parent.x + (parent.width || 100) + 120; // Increased from 50 to 120
+          newY = parent.y + jitter();
+          break;
+        case 'left':
+          newX = parent.x - (parent.width || 100) - 120; // Increased from 50 to 120
+          newY = parent.y + jitter();
+          break;
+        case 'bottom':
+          newX = parent.x + jitter();
+          newY = parent.y + (parent.height || 40) + 120; // Increased from 50 to 120
+          break;
+        case 'top':
+          newX = parent.x + jitter();
+          newY = parent.y - (parent.height || 40) - 120; // Increased from 50 to 120
+          break;
+        default:
+          newX = parent.x + 200;
+          newY = parent.y + jitter();
+      }
+    } else {
+      // Generate random position around parent (one of 8 directions)
+      const angle = Math.floor(Math.random() * 8) * (Math.PI / 4); // 0, 45, 90, ... degrees
+      const distance = 120;
+      newX = parent.x + Math.cos(angle) * distance - 50; // -50 to center horizontally
+      newY = parent.y + Math.sin(angle) * distance - 20; // -20 to center vertically
+    }
 
     const newNode: MindMapNode = {
       id: this.generateId(),
-      text: 'New Idea',
+      text: '',
       x: newX,
       y: newY,
-      parentId: parentId
+      parentId: parentId,
+      style: parent.style ? { ...parent.style } : undefined // Inherit parent's style
     };
 
     this.nodes.update(nodes => [...nodes, newNode]);
     this.selectedNodeId.set(newNode.id);
-    
+    this.selectedNodeIds.set(new Set()); // Don't add to multi-select by default
+
+    // Add to history
+    this.addToHistory('create', nodesBefore);
+
+    return newNode;
+  }
+
+  addSiblingNode(siblingId: string): MindMapNode | null {
+    const sibling = this.nodes().find(n => n.id === siblingId);
+    if (!sibling || !sibling.parentId) return null;
+
+    const parent = this.nodes().find(n => n.id === sibling.parentId);
+    if (!parent) return null;
+
+    // Save current state before modification
+    const nodesBefore = [...this.nodes()];
+
+    // Determine layout direction based on relation to parent
+    const dx = sibling.x - parent.x;
+    const dy = sibling.y - parent.y;
+
+    let newX = sibling.x;
+    let newY = sibling.y;
+    const gap = 60; // Standard gap between siblings
+
+    // If mostly horizontal (Right/Left side), stack siblings VERTICALLY
+    if (Math.abs(dx) > Math.abs(dy)) {
+      newY += gap;
+    } 
+    // If mostly vertical (Top/Bottom side), stack siblings HORIZONTALLY
+    else {
+      newX += gap * 2; // Wider gap for horizontal text width
+    }
+
+    // Add a tiny jitter to keep lines organic
+    const jitter = (Math.random() - 0.5) * 10;
+    newX += jitter;
+    newY += jitter;
+
+    const newNode: MindMapNode = {
+      id: this.generateId(),
+      text: '',
+      x: newX,
+      y: newY,
+      parentId: parent.id, // Same parent
+      style: sibling.style ? { ...sibling.style } : undefined // Inherit sibling's style
+    };
+
+    this.nodes.update(nodes => [...nodes, newNode]);
+    this.selectedNodeId.set(newNode.id);
+    this.selectedNodeIds.set(new Set()); // Don't add to multi-select by default
+
     // Add to history
     this.addToHistory('create', nodesBefore);
 
@@ -171,31 +266,100 @@ export class AppStateService {
   }
 
   deleteSelectedNode(selectedId: string): void {
-    if (!selectedId) return;
+    // Get all selected nodes or just the single one
+    const selectedIds = this.selectedNodeIds().size > 0
+      ? Array.from(this.selectedNodeIds())
+      : [selectedId];
 
-    // Prevent deleting root node (node without parent)
-    const nodeToDelete = this.nodes().find(n => n.id === selectedId);
-    if (!nodeToDelete || !nodeToDelete.parentId) {
-      return;
-    }
+    if (selectedIds.length === 0) return;
 
     // Save current state before modification
     const nodesBefore = [...this.nodes()];
 
-    // Delete the node and all its descendants recursively
-    const nodesToKeep = this.nodes().filter(node => {
-      return !this.isDescendant(node.id, selectedId);
-    });
+    // Delete all selected nodes and their descendants
+    const nodesToDelete = new Set<string>();
+
+    for (const id of selectedIds) {
+      const nodeToDelete = this.nodes().find(n => n.id === id);
+      // Prevent deleting root node (node without parent)
+      if (!nodeToDelete || !nodeToDelete.parentId) {
+        continue;
+      }
+
+      // Add this node and all its descendants to delete set
+      this.nodes().forEach(node => {
+        if (this.isDescendant(node.id, id)) {
+          nodesToDelete.add(node.id);
+        }
+      });
+    }
+
+    // Keep only nodes that are not in the delete set
+    const nodesToKeep = this.nodes().filter(node => !nodesToDelete.has(node.id));
 
     this.nodes.set(nodesToKeep);
-    this.selectedNodeId.set(null);
-    
+    this.clearSelection();
+
     // Add to history
     this.addToHistory('delete', nodesBefore);
   }
 
-  selectNode(nodeId: string): void {
+  selectNode(nodeId: string, multiSelect: boolean = false): void {
+    if (multiSelect) {
+      // Multi-select: toggle this node in the selection
+      this.toggleNodeSelection(nodeId);
+    } else {
+      // Single select: clear previous selection and select only this node
+      this.selectedNodeId.set(nodeId);
+      this.selectedNodeIds.set(new Set([nodeId]));
+    }
+  }
+
+  /**
+   * Toggle a node in/out of multi-selection (M key or Ctrl+Click)
+   */
+  toggleNodeSelection(nodeId: string): void {
+    const currentSelection = new Set(this.selectedNodeIds());
+
+    if (currentSelection.has(nodeId)) {
+      // Node is already in multi-select, remove it
+      currentSelection.delete(nodeId);
+    } else {
+      // Node is not in multi-select, add it
+      currentSelection.add(nodeId);
+    }
+
+    this.selectedNodeIds.set(currentSelection);
+
+    // Update focused node to this node
     this.selectedNodeId.set(nodeId);
+  }
+
+  /**
+   * Check if a node is in the multi-selection
+   */
+  isNodeSelected(nodeId: string): boolean {
+    return this.selectedNodeIds().has(nodeId);
+  }
+
+  /**
+   * Clear all multi-selections
+   */
+  clearSelection(): void {
+    this.selectedNodeIds.set(new Set());
+    this.selectedNodeId.set(null);
+  }
+
+  /**
+   * Select all nodes
+   */
+  selectAll(): void {
+    const allIds = new Set(this.nodes().map(n => n.id));
+    this.selectedNodeIds.set(allIds);
+    // Keep current focused node or select first
+    if (!this.selectedNodeId() || !allIds.has(this.selectedNodeId()!)) {
+      this.selectedNodeId.set(this.nodes()[0]?.id || null);
+    }
   }
 
   /**
@@ -249,14 +413,31 @@ export class AppStateService {
       return;
     }
 
+    // Calculate delta for moving multiple selected nodes together
+    const deltaX = x - node.x;
+    const deltaY = y - node.y;
+
+    // Get all selected nodes
+    const selectedIds = this.selectedNodeIds();
+
     // If dragging, update position without creating history
     // History will be created when drag ends
-    this.nodes.update(nodes =>
-      nodes.map(n =>
-        n.id === nodeId ? { ...n, x, y } : n
-      )
-    );
-    
+    if (selectedIds.size > 1 && selectedIds.has(nodeId)) {
+      // Move all selected nodes together
+      this.nodes.update(nodes =>
+        nodes.map(n =>
+          selectedIds.has(n.id) ? { ...n, x: n.x + deltaX, y: n.y + deltaY } : n
+        )
+      );
+    } else {
+      // Move only this node
+      this.nodes.update(nodes =>
+        nodes.map(n =>
+          n.id === nodeId ? { ...n, x, y } : n
+        )
+      );
+    }
+
     // Save state to localStorage but don't add to history during drag
     if (this.isDragging) {
       localStorage.setItem('mindmapNodes', JSON.stringify(this.nodes()));
@@ -283,6 +464,29 @@ export class AppStateService {
       )
     );
     
+    // Add to history
+    this.addToHistory('update', nodesBefore);
+  }
+
+  updateNodeStyle(nodeId: string, style: Partial<NodeStyle>): void {
+    // Get all selected nodes or just the single one
+    const selectedIds = this.selectedNodeIds().size > 0
+      ? Array.from(this.selectedNodeIds())
+      : [nodeId];
+
+    // Save current state before modification
+    const nodesBefore = [...this.nodes()];
+
+    // Update style for all selected nodes
+    this.nodes.update(nodes =>
+      nodes.map(n =>
+        selectedIds.includes(n.id) ? {
+          ...n,
+          style: { ...(n.style || {}), ...style }
+        } : n
+      )
+    );
+
     // Add to history
     this.addToHistory('update', nodesBefore);
   }
@@ -322,7 +526,7 @@ export class AppStateService {
     const viewportHeight = window.innerHeight;
     const rootNode: MindMapNode = {
       id: this.generateId(),
-      text: 'Central Topic',
+      text: '',
       x: viewportWidth / 2 - 75,
       y: viewportHeight / 2 - 25,
       parentId: null
@@ -331,7 +535,8 @@ export class AppStateService {
     // Clear all nodes and add the new root node
     this.nodes.set([rootNode]);
     this.selectedNodeId.set(rootNode.id);
-    
+    this.selectedNodeIds.set(new Set()); // Don't add to multi-select by default
+
     // Create a single history entry for the entire reset operation
     this.addToHistory('delete', nodesBefore);
   }

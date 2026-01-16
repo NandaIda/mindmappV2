@@ -1,6 +1,8 @@
-import { Component, ViewChild, ElementRef, AfterViewInit, Input, HostListener, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, ViewChild, ElementRef, AfterViewInit, Input, HostListener, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
 import { AppStateService } from '../../services/app-state.service';
 import { FileService } from '../../services/file.service';
+import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import { HelpModalComponent } from '../help-modal/help-modal.component';
 
 @Component({
   selector: 'app-mindmap',
@@ -12,6 +14,8 @@ import { FileService } from '../../services/file.service';
   @ViewChild('nodesLayer') nodesLayer!: ElementRef<HTMLElement>;
   @ViewChild('svgLayer') svgLayer!: ElementRef<SVGElement>;
   @ViewChild('mindmapContainer') mindmapContainer!: ElementRef<HTMLElement>;
+
+  private modalService = inject(NgbModal);
 
   isDragging = false;
   draggedNodeId: string | null = null;
@@ -43,7 +47,20 @@ import { FileService } from '../../services/file.service';
   MAX_ZOOM_SPEED = 0.2; // Maximum zoom delta per event
   ZOOM_SMOOTHING = 0.1; // Smoothing factor for zoom
   PAN_SMOOTHING = 0.15; // Smoothing factor for pan
-  
+
+  // Wheel event sensitivity adjustment (to match horizontal and vertical speeds)
+  WHEEL_PAN_SENSITIVITY_X = 1.0; // Horizontal sensitivity multiplier
+  WHEEL_PAN_SENSITIVITY_Y = 0.5; // Vertical sensitivity multiplier (reduced to match horizontal feel)
+
+  // Wheel event smoothing for diagonal movement
+  private pendingWheelDeltaX = 0;
+  private pendingWheelDeltaY = 0;
+  private wheelAnimationFrame: any = null;
+
+  // Track keyboard navigation to disable hover effects
+  isKeyboardNavigating = false;
+  private keyboardNavigationTimeout: any = null;
+
   // Track if we're attempting to drag (to prevent immediate edit mode)
   isAttemptingDrag = false;
   touchStartTime = 0;
@@ -51,6 +68,11 @@ import { FileService } from '../../services/file.service';
   
   // Track which node is being edited (for iOS keyboard support)
   editingNodeId: string | null = null;
+
+  // Keyboard node movement
+  private moveInterval: any = null;
+  private moveStartTime: number = 0;
+  private pressedArrowKeys: Set<string> = new Set();
 
   constructor(
     public appState: AppStateService,
@@ -80,7 +102,7 @@ import { FileService } from '../../services/file.service';
 
   @HostListener('document:keydown', ['$event'])
   onKeyDown(event: KeyboardEvent) {
-    // Check if we're editing text in a node - don't trigger shortcuts when editing
+    // Check if we're editing text in a node
     const activeElement = document.activeElement as HTMLElement;
     const isEditingNode = activeElement && activeElement.classList.contains('node-content');
     
@@ -98,24 +120,99 @@ import { FileService } from '../../services/file.service';
     const cmdOrCtrl = isMac ? event.metaKey : event.ctrlKey;
     const shift = event.shiftKey;
 
-    // Handle shortcuts
     switch (event.key) {
-      case '+':
-      case '=': // For keyboards where + is on the same key as =
-        if (!cmdOrCtrl && !shift) {
-          event.preventDefault();
-          this.addChildNode();
+      // Navigation & Movement
+      case 'ArrowUp':
+        event.preventDefault();
+        this.setKeyboardNavigating();
+        if (cmdOrCtrl) {
+          const selectedId = this.appState.selectedNodeId();
+          if (selectedId) {
+            this.pressedArrowKeys.add('ArrowUp');
+            this.startMovingNode(selectedId);
+          }
+        } else {
+          shift ? this.quickAddChild('top') : this.navigateFocus('top');
+        }
+        break;
+      case 'ArrowDown':
+        event.preventDefault();
+        this.setKeyboardNavigating();
+        if (cmdOrCtrl) {
+          const selectedId = this.appState.selectedNodeId();
+          if (selectedId) {
+            this.pressedArrowKeys.add('ArrowDown');
+            this.startMovingNode(selectedId);
+          }
+        } else {
+          shift ? this.quickAddChild('bottom') : this.navigateFocus('bottom');
+        }
+        break;
+      case 'ArrowLeft':
+        event.preventDefault();
+        this.setKeyboardNavigating();
+        if (cmdOrCtrl) {
+          const selectedId = this.appState.selectedNodeId();
+          if (selectedId) {
+            this.pressedArrowKeys.add('ArrowLeft');
+            this.startMovingNode(selectedId);
+          }
+        } else {
+          shift ? this.quickAddChild('left') : this.navigateFocus('left');
+        }
+        break;
+      case 'ArrowRight':
+        event.preventDefault();
+        this.setKeyboardNavigating();
+        if (cmdOrCtrl) {
+          const selectedId = this.appState.selectedNodeId();
+          if (selectedId) {
+            this.pressedArrowKeys.add('ArrowRight');
+            this.startMovingNode(selectedId);
+          }
+        } else {
+          shift ? this.quickAddChild('right') : this.navigateFocus('right');
         }
         break;
 
+      // Creation & Editing
+      case 'Tab':
+        event.preventDefault();
+        this.handleTabKey();
+        break;
+        
+      case 'Enter': {
+        event.preventDefault();
+        const selectedId = this.appState.selectedNodeId();
+        if (selectedId) {
+          this.enableEditMode(selectedId);
+        }
+        break;
+      }
+
+      case 'F2': {
+        event.preventDefault();
+        const selectedId = this.appState.selectedNodeId();
+        if (selectedId) {
+          this.enableEditMode(selectedId);
+        }
+        break;
+      }
+
+      case 'Delete':
+      case 'Backspace':
       case '-':
-      case '_': // For keyboards where - is on the same key as _
+      case '_':
         if (!cmdOrCtrl && !shift) {
-          event.preventDefault();
-          this.deleteSelectedNode();
+          // Only delete if we have a selection
+          if (this.appState.selectedNodeId()) {
+            event.preventDefault();
+            this.handleSmartDelete();
+          }
         }
         break;
 
+      // Standard Shortcuts
       case 'z':
       case 'Z':
         if (cmdOrCtrl && !shift) {
@@ -140,6 +237,9 @@ import { FileService } from '../../services/file.service';
         if (cmdOrCtrl) {
           event.preventDefault();
           this.fileService.export();
+        } else if (shift) {
+          event.preventDefault();
+          this.cycleShape();
         }
         break;
 
@@ -150,6 +250,434 @@ import { FileService } from '../../services/file.service';
           this.uploadMindMap();
         }
         break;
+
+      case 'k':
+      case 'K':
+        if (cmdOrCtrl) {
+          event.preventDefault();
+          this.openHelpModal();
+        }
+        break;
+
+      // Formatting & Styling
+      case 'b':
+      case 'B':
+        if (cmdOrCtrl) {
+          event.preventDefault();
+          this.toggleBold();
+        }
+        break;
+      
+      case 'i':
+      case 'I':
+        if (cmdOrCtrl) {
+          event.preventDefault();
+          this.toggleItalic();
+        }
+        break;
+      
+      // 's' case merged above to avoid duplication
+      
+      case 'c':
+      case 'C':
+        if (shift) {
+          event.preventDefault();
+          this.cycleColor();
+        }
+        break;
+
+      // View Control
+      case '0':
+        if (!isEditingNode) {
+          event.preventDefault();
+          this.resetView();
+        }
+        break;
+        
+      case ' ':
+        if (!isEditingNode) {
+          event.preventDefault();
+          this.centerOnSelection();
+        }
+        break;
+
+      // Multi-select
+      case 'm':
+      case 'M':
+        if (!isEditingNode) {
+          event.preventDefault();
+          const selectedId = this.appState.selectedNodeId();
+          if (selectedId) {
+            this.appState.toggleNodeSelection(selectedId);
+          }
+        }
+        break;
+
+      case 'Escape':
+        if (!isEditingNode) {
+          event.preventDefault();
+          this.appState.clearSelection();
+        }
+        break;
+
+      case 'a':
+      case 'A':
+        if (cmdOrCtrl && !isEditingNode) {
+          event.preventDefault();
+          this.appState.selectAll();
+        }
+        break;
+    }
+  }
+
+  // --- Styling Helpers ---
+  toggleBold() {
+    const selectedId = this.appState.selectedNodeId();
+    if (!selectedId) return;
+    const node = this.appState.nodes().find(n => n.id === selectedId);
+    if (!node) return;
+    
+    const isBold = node.style?.fontWeight === 'bold';
+    this.appState.updateNodeStyle(selectedId, { fontWeight: isBold ? 'normal' : 'bold' });
+  }
+
+  toggleItalic() {
+    const selectedId = this.appState.selectedNodeId();
+    if (!selectedId) return;
+    const node = this.appState.nodes().find(n => n.id === selectedId);
+    if (!node) return;
+    
+    const isItalic = node.style?.fontStyle === 'italic';
+    this.appState.updateNodeStyle(selectedId, { fontStyle: isItalic ? 'normal' : 'italic' });
+  }
+
+  cycleShape() {
+    const selectedId = this.appState.selectedNodeId();
+    if (!selectedId) return;
+    const node = this.appState.nodes().find(n => n.id === selectedId);
+    if (!node) return;
+    
+    const shapes: ('rect' | 'rounded' | 'pill' | 'diamond')[] = ['rect', 'rounded', 'pill', 'diamond'];
+    const currentShape = node.style?.shape || 'rounded'; // Default is rounded
+    const nextIndex = (shapes.indexOf(currentShape as any) + 1) % shapes.length;
+    
+    this.appState.updateNodeStyle(selectedId, { shape: shapes[nextIndex] });
+  }
+
+  cycleColor() {
+    const selectedId = this.appState.selectedNodeId();
+    if (!selectedId) return;
+    const node = this.appState.nodes().find(n => n.id === selectedId);
+    if (!node) return;
+    
+    const colors = [
+      { bg: '#ffffff', text: '#1f2937' }, // White (Default)
+      { bg: '#eff6ff', text: '#1e40af' }, // Blue
+      { bg: '#f0fdf4', text: '#166534' }, // Green
+      { bg: '#fefce8', text: '#854d0e' }, // Yellow
+      { bg: '#fff7ed', text: '#9a3412' }, // Orange
+      { bg: '#faf5ff', text: '#6b21a8' }, // Purple
+    ];
+    
+    const currentBg = node.style?.backgroundColor || '#ffffff';
+    const currentIndex = colors.findIndex(c => c.bg === currentBg);
+    const nextIndex = (currentIndex + 1) % colors.length;
+    const nextColor = colors[nextIndex];
+    
+    this.appState.updateNodeStyle(selectedId, { 
+      backgroundColor: nextColor.bg,
+      color: nextColor.text
+    });
+  }
+
+  centerOnSelection() {
+    const selectedId = this.appState.selectedNodeId();
+    if (!selectedId) return;
+    const node = this.appState.nodes().find(n => n.id === selectedId);
+    if (!node) return;
+
+    // Calculate center of node
+    const nodeCenterX = node.x + (node.width || 100) / 2;
+    const nodeCenterY = node.y + (node.height || 40) / 2;
+
+    // Viewport dimensions
+    const viewportWidth = this.mindmapContainer?.nativeElement.clientWidth || window.innerWidth;
+    const viewportHeight = this.mindmapContainer?.nativeElement.clientHeight || window.innerHeight;
+
+    // Calculate pan to center the node
+    this.panX = (viewportWidth / 2) - (nodeCenterX * this.scale);
+    this.panY = (viewportHeight / 2) - (nodeCenterY * this.scale);
+    
+    this.updateTransform();
+  }
+
+  @HostListener('document:keyup', ['$event'])
+  onKeyUp(event: KeyboardEvent) {
+    if (event.key.startsWith('Arrow')) {
+      this.pressedArrowKeys.delete(event.key);
+      if (this.pressedArrowKeys.size === 0) {
+        this.stopMovingNode();
+      }
+    }
+    
+    // Also stop if Ctrl/Cmd is released
+    if (event.key === 'Control' || event.key === 'Meta') {
+      this.stopMovingNode();
+    }
+  }
+
+  @HostListener('window:blur')
+  onWindowBlur() {
+    this.stopMovingNode();
+  }
+
+  openHelpModal() {
+    this.modalService.open(HelpModalComponent, {
+      centered: true,
+      size: 'lg'
+    });
+  }
+
+  // --- Keyboard Logic Helpers ---
+
+  /**
+   * Spatially navigate focus to the nearest node in the given direction
+   */
+  navigateFocus(direction: 'top' | 'bottom' | 'left' | 'right') {
+    const selectedId = this.appState.selectedNodeId();
+    if (!selectedId) {
+      // If nothing selected, select root
+      const root = this.appState.nodes().find(n => !n.parentId);
+      if (root) this.selectNode(root.id);
+      return;
+    }
+
+    const current = this.appState.nodes().find(n => n.id === selectedId);
+    if (!current) return;
+
+    // Filter candidates based on direction
+    const candidates = this.appState.nodes().filter(node => {
+      if (node.id === current.id) return false;
+      
+      const dx = node.x - current.x;
+      const dy = node.y - current.y;
+
+      switch (direction) {
+        case 'right': return dx > 0;
+        case 'left': return dx < 0;
+        case 'bottom': return dy > 0;
+        case 'top': return dy < 0;
+      }
+    });
+
+    if (candidates.length === 0) return;
+
+    // Find closest candidate using a weighted distance formula
+    // We penalize orthogonal distance to prefer visual straight lines
+    let closestNode = null;
+    let minScore = Infinity;
+
+    candidates.forEach(node => {
+      const dx = Math.abs(node.x - current.x);
+      const dy = Math.abs(node.y - current.y);
+      let score = 0;
+
+      // Euclidean distance + Penalty for being off-axis
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (direction === 'left' || direction === 'right') {
+        score = dist + (dy * 2); // Penalize vertical deviation
+      } else {
+        score = dist + (dx * 2); // Penalize horizontal deviation
+      }
+
+      if (score < minScore) {
+        minScore = score;
+        closestNode = node;
+      }
+    });
+
+    if (closestNode) {
+      const nodeId = (closestNode as any).id;
+
+      // Navigation always just moves focus without modifying selection
+      // In multi-select mode: focus moves, selections stay
+      // In single-select mode: focus moves, ready for 'M' to mark
+      this.appState.selectedNodeId.set(nodeId);
+    }
+  }
+
+  /**
+   * Keyboard movement logic
+   */
+  private moveNodeLoop() {
+    const selectedId = this.appState.selectedNodeId();
+    if (!selectedId || this.pressedArrowKeys.size === 0) {
+      this.stopMovingNode();
+      return;
+    }
+
+    const elapsed = Date.now() - this.moveStartTime;
+    // Base speed: 2px per frame (assuming ~60fps)
+    // Acceleration: increase speed every 300ms
+    const acceleration = Math.floor(elapsed / 300);
+    const speed = 2 + acceleration;
+
+    const node = this.appState.nodes().find(n => n.id === selectedId);
+    if (node) {
+      let dx = 0;
+      let dy = 0;
+      if (this.pressedArrowKeys.has('ArrowUp')) dy -= speed;
+      if (this.pressedArrowKeys.has('ArrowDown')) dy += speed;
+      if (this.pressedArrowKeys.has('ArrowLeft')) dx -= speed;
+      if (this.pressedArrowKeys.has('ArrowRight')) dx += speed;
+
+      if (dx !== 0 || dy !== 0) {
+        // Use a small scale-independent movement
+        this.appState.updateNodePosition(node.id, node.x + dx, node.y + dy);
+      }
+    }
+  }
+
+  private startMovingNode(selectedId: string) {
+    if (this.moveInterval) return;
+    
+    this.moveStartTime = Date.now();
+    this.appState.startDrag(selectedId);
+    this.moveInterval = setInterval(() => this.moveNodeLoop(), 16);
+  }
+
+  private stopMovingNode() {
+    if (this.moveInterval) {
+      clearInterval(this.moveInterval);
+      this.moveInterval = null;
+      this.appState.endDrag();
+    }
+    this.pressedArrowKeys.clear();
+  }
+
+  /**
+   * Quickly add a child in a direction and immediately edit it (Shift + Arrow)
+   */
+  quickAddChild(direction: 'top' | 'bottom' | 'left' | 'right') {
+    const selectedId = this.appState.selectedNodeId();
+    if (selectedId) {
+      const newNode = this.appState.addChildNode(selectedId, direction);
+      if (newNode) {
+        // Use timeout to let the DOM update before focusing
+        setTimeout(() => this.enableEditMode(newNode.id), 50);
+      }
+    }
+  }
+
+  /**
+   * Smart Tab:
+   * 1. If Root/No Parent: Fill empty quadrants (Right -> Left -> Bottom -> Top)
+   * 2. If Child: Continue in the direction relative to parent
+   */
+  handleTabKey() {
+    const selectedId = this.appState.selectedNodeId();
+    if (!selectedId) return;
+
+    const current = this.appState.nodes().find(n => n.id === selectedId);
+    if (!current) return;
+
+    let direction: 'top' | 'bottom' | 'left' | 'right' = 'right';
+
+    if (!current.parentId) {
+      // Root Node Strategy: Fill empty slots
+      const children = this.appState.nodes().filter(n => n.parentId === current.id);
+      const occupied = new Set<string>();
+
+      children.forEach(child => {
+        occupied.add(this.getRelativeDirection(current, child));
+      });
+
+      if (!occupied.has('right')) direction = 'right';
+      else if (!occupied.has('left')) direction = 'left';
+      else if (!occupied.has('bottom')) direction = 'bottom';
+      else if (!occupied.has('top')) direction = 'top';
+      // If all full, default to Right
+    } else {
+      // Child Node Strategy: Continue branch direction
+      const parent = this.appState.nodes().find(n => n.id === current.parentId);
+      if (parent) {
+        direction = this.getRelativeDirection(parent, current);
+      }
+    }
+
+    const newNode = this.appState.addChildNode(selectedId, direction);
+    if (newNode) {
+      setTimeout(() => this.enableEditMode(newNode.id), 50);
+    }
+  }
+
+  /**
+   * Enter Key: Add Sibling
+   */
+  handleAddSibling() {
+    const selectedId = this.appState.selectedNodeId();
+    if (!selectedId) return;
+
+    // Use the smart service method to place sibling relative to current node
+    const newNode = this.appState.addSiblingNode(selectedId);
+    
+    if (newNode) {
+      setTimeout(() => this.enableEditMode(newNode.id), 50);
+    }
+  }
+
+  /**
+   * Smart Delete: Delete and focus nearest valid neighbor
+   */
+  handleSmartDelete() {
+    const selectedId = this.appState.selectedNodeId();
+    if (!selectedId) return;
+
+    const current = this.appState.nodes().find(n => n.id === selectedId);
+    if (!current) return;
+
+    // Determine next node to focus BEFORE deleting
+    let nextFocusId: string | null = null;
+
+    // 1. Try to find a sibling
+    if (current.parentId) {
+      const siblings = this.appState.nodes().filter(n => n.parentId === current.parentId && n.id !== current.id);
+      if (siblings.length > 0) {
+        // Pick the closest sibling
+        nextFocusId = siblings[siblings.length - 1].id; // Simple strategy: last one created
+      } else {
+        // 2. Fallback to Parent
+        nextFocusId = current.parentId;
+      }
+    } else {
+      // Deleting root? (Usually protected, but just in case)
+      // Pick any other node?
+      const anyNode = this.appState.nodes().find(n => n.id !== current.id);
+      if (anyNode) nextFocusId = anyNode.id;
+    }
+
+    // Perform Delete
+    this.deleteSelectedNode();
+
+    // Set Focus
+    if (nextFocusId) {
+      // Need a slight delay because delete might trigger a redraw
+      setTimeout(() => this.selectNode(nextFocusId!), 10);
+    }
+  }
+
+  /**
+   * Helper: Calculate relative direction between two nodes
+   */
+  getRelativeDirection(from: any, to: any): 'right' | 'left' | 'top' | 'bottom' {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+
+    if (Math.abs(dx) > Math.abs(dy)) {
+      return dx > 0 ? 'right' : 'left';
+    } else {
+      return dy > 0 ? 'bottom' : 'top';
     }
   }
 
@@ -179,14 +707,25 @@ import { FileService } from '../../services/file.service';
 
   startDragNode(e: MouseEvent | TouchEvent, nodeId: string) {
     e.stopPropagation();
-    
+
+    // Check if Ctrl/Cmd is pressed for multi-select (don't start dragging)
+    if ('ctrlKey' in e || 'metaKey' in e) {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const isMultiSelect = isMac ? (e as MouseEvent).metaKey : (e as MouseEvent).ctrlKey;
+
+      if (isMultiSelect) {
+        // Don't start dragging, just let the click handler deal with multi-select
+        return;
+      }
+    }
+
     let clientX: number;
     let clientY: number;
 
     if ('touches' in e && e.touches.length > 0) {
       clientX = e.touches[0].clientX;
       clientY = e.touches[0].clientY;
-      
+
       // Track initial touch position for drag detection
       this.initialTouchX = clientX;
       this.initialTouchY = clientY;
@@ -196,10 +735,12 @@ import { FileService } from '../../services/file.service';
       this.isAttemptingDrag = true;
       this.touchStartTime = Date.now();
       this.lastTouchNodeId = nodeId;
-      
-      // Select node on touch start
-      this.selectNode(nodeId);
-      
+
+      // If node is not in multi-select, clear selection and select only this node
+      if (!this.appState.isNodeSelected(nodeId)) {
+        this.selectNode(nodeId);
+      }
+
       // Add dragging class to container
       this.mindmapContainer?.nativeElement.classList.add('dragging');
     } else {
@@ -208,10 +749,12 @@ import { FileService } from '../../services/file.service';
       clientY = (e as MouseEvent).clientY;
       this.isDragging = true;
       this.draggedNodeId = nodeId;
-      
-      // Select node on mouse down
-      this.selectNode(nodeId);
-      
+
+      // If node is not in multi-select, clear selection and select only this node
+      if (!this.appState.isNodeSelected(nodeId)) {
+        this.selectNode(nodeId);
+      }
+
       // Add dragging class to container
       this.mindmapContainer?.nativeElement.classList.add('dragging');
     }
@@ -227,8 +770,15 @@ import { FileService } from '../../services/file.service';
     }
   }
 
-  selectNode(nodeId: string) {
-    this.appState.selectNode(nodeId);
+  selectNode(nodeId: string, multiSelect: boolean = false) {
+    if (multiSelect) {
+      // Multi-select mode: toggle this node
+      this.appState.toggleNodeSelection(nodeId);
+    } else {
+      // Single select: just set focus, clear multi-selection
+      this.appState.selectedNodeId.set(nodeId);
+      this.appState.selectedNodeIds.set(new Set());
+    }
   }
 
   /**
@@ -260,10 +810,10 @@ import { FileService } from '../../services/file.service';
     return this.appState.nodes().find(n => n.id === parentId);
   }
 
-  addChildNode() {
-    const parentId = this.appState.selectedNodeId();
-    if (parentId) {
-      this.appState.addChildNode(parentId);
+  addChildNode(parentId?: string, direction?: 'top' | 'bottom' | 'left' | 'right') {
+    const targetId = parentId || this.appState.selectedNodeId();
+    if (targetId) {
+      this.appState.addChildNode(targetId, direction);
     }
   }
 
@@ -285,22 +835,19 @@ import { FileService } from '../../services/file.service';
     // Prevent default to avoid drag interference
     e.preventDefault();
     e.stopPropagation();
-    
-    // Select the node
-    this.selectNode(nodeId);
-    
-    // Enable edit mode for this node
-    this.enableEditMode(nodeId);
+
+    // Check for Ctrl/Cmd key for multi-select
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const isMultiSelect = isMac ? e.metaKey : e.ctrlKey;
+
+    // Select the node (with or without multi-select)
+    this.selectNode(nodeId, isMultiSelect);
   }
 
-  onContentEdit(e: Event, nodeId: string) {
-    const element = e.target as HTMLElement;
-    const text = element.innerText || element.textContent || '';
-    
-    // Update the node text in the app state
-    if (text.trim() !== '') {
-      this.appState.updateNodeText(nodeId, text);
-    }
+  onNodeDblClick(e: MouseEvent, nodeId: string) {
+    e.preventDefault();
+    e.stopPropagation();
+    this.enableEditMode(nodeId);
   }
 
   finishEditNode(nodeId: string) {
@@ -309,17 +856,7 @@ import { FileService } from '../../services/file.service';
     
     if (contentElement) {
       const text = contentElement.textContent || '';
-      
-      // Only update if text is not empty
-      if (text.trim() !== '') {
-        this.appState.updateNodeText(nodeId, text.trim());
-      } else {
-        // Revert to original text if empty
-        const node = this.appState.nodes().find(n => n.id === nodeId);
-        if (node) {
-          contentElement.textContent = node.text;
-        }
-      }
+      this.appState.updateNodeText(nodeId, text.trim());
       
       // Exit edit mode
       this.editingNodeId = null;
@@ -354,16 +891,13 @@ import { FileService } from '../../services/file.service';
     if (e.key === 'Enter' && !e.shiftKey) {
       // Regular Enter - save and finish editing
       e.preventDefault();
+      e.stopPropagation();
       this.finishEditNode(nodeId);
       (e.target as HTMLElement).blur();
     } else if (e.key === 'Escape') {
-      // Cancel editing
+      // Stop editing (save current text via blur)
       e.preventDefault();
-      const node = this.appState.nodes().find(n => n.id === nodeId);
-      if (node) {
-        const contentElement = e.target as HTMLElement;
-        contentElement.textContent = node.text;
-      }
+      e.stopPropagation();
       (e.target as HTMLElement).blur();
     }
   }
@@ -439,8 +973,38 @@ import { FileService } from '../../services/file.service';
   @HostListener('wheel', ['$event'])
   onWheel(e: WheelEvent) {
     e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    this.zoom(delta, e.clientX, e.clientY);
+
+    if (e.ctrlKey) {
+      // Zoom with Ctrl + Scroll
+      // Adjust sensitivity for trackpad/mouse wheel differences
+      // Standard mouse wheel delta is often +/- 100, trackpad is much smaller.
+      // We use a small factor to make both usable.
+      const zoomIntensity = 0.002;
+      const delta = -e.deltaY * zoomIntensity;
+      this.zoom(delta, e.clientX, e.clientY);
+    } else {
+      // Pan with Scroll (Touchpad 2-finger move or Mouse Wheel)
+      // Accumulate deltas and apply them in animation frame for smooth diagonal movement
+      // Apply sensitivity multipliers to balance horizontal and vertical speeds
+      this.pendingWheelDeltaX += e.deltaX * this.WHEEL_PAN_SENSITIVITY_X;
+      this.pendingWheelDeltaY += e.deltaY * this.WHEEL_PAN_SENSITIVITY_Y;
+
+      // Schedule update if not already scheduled
+      if (!this.wheelAnimationFrame) {
+        this.wheelAnimationFrame = requestAnimationFrame(() => {
+          // Apply accumulated deltas
+          this.panX -= this.pendingWheelDeltaX / this.scale;
+          this.panY -= this.pendingWheelDeltaY / this.scale;
+
+          // Reset pending deltas
+          this.pendingWheelDeltaX = 0;
+          this.pendingWheelDeltaY = 0;
+          this.wheelAnimationFrame = null;
+
+          this.updateTransform();
+        });
+      }
+    }
   }
   
   @HostListener('touchstart', ['$event'])
@@ -489,9 +1053,9 @@ import { FileService } from '../../services/file.service';
           this.lastPanX = touch.clientX;
           this.lastPanY = touch.clientY;
           this.mindmapContainer.nativeElement.classList.add('panning');
-          
-          // Cancel node selection when starting background drag
-          this.appState.selectedNodeId.set(null);
+
+          // Cancel all selections when starting background drag
+          this.appState.clearSelection();
         }
         
         // Compensate drag speed for current scale
@@ -542,8 +1106,8 @@ import { FileService } from '../../services/file.service';
     // 1. No node selected - drag anywhere
     // 2. Node selected - drag only when clicking outside the node
     if (!isOnNode) {
-      // Cancel node selection when clicking on background
-      this.appState.selectedNodeId.set(null);
+      // Cancel all selections when clicking on background
+      this.appState.clearSelection();
 
       // Blur any active edit when clicking outside
       this.blurActiveEdit();
@@ -591,6 +1155,15 @@ import { FileService } from '../../services/file.service';
 
   @HostListener('document:mousemove', ['$event'])
   onDocumentMouseMove(e: MouseEvent) {
+    // Clear keyboard navigation flag on mouse movement
+    if (this.isKeyboardNavigating) {
+      this.isKeyboardNavigating = false;
+      if (this.keyboardNavigationTimeout) {
+        clearTimeout(this.keyboardNavigationTimeout);
+        this.keyboardNavigationTimeout = null;
+      }
+    }
+
     // Only handle node dragging if we're actually dragging a node (not panning background)
     if (this.isDragging && this.draggedNodeId && !this.isPanning) {
       const node = this.appState.nodes().find(n => n.id === this.draggedNodeId);
@@ -717,7 +1290,7 @@ import { FileService } from '../../services/file.service';
         // 4. Not dragging
         // 5. Touch didn't start on a node
         if (isOutsideNode && !this.isTouchDragging && !isClickableElement && !isInNavbarArea && !this.touchStartedOnNode) {
-          this.appState.selectedNodeId.set(null);
+          this.appState.clearSelection();
           // Blur any active edit when touching outside
           this.blurActiveEdit();
         }
@@ -875,7 +1448,38 @@ import { FileService } from '../../services/file.service';
     this.updateTransform();
   }
 
+  /**
+   * Track keyboard navigation to hide hover effects
+   */
+  setKeyboardNavigating(): void {
+    this.isKeyboardNavigating = true;
+
+    // Clear any existing timeout
+    if (this.keyboardNavigationTimeout) {
+      clearTimeout(this.keyboardNavigationTimeout);
+    }
+
+    // Reset flag after 2 seconds of no keyboard activity
+    this.keyboardNavigationTimeout = setTimeout(() => {
+      this.isKeyboardNavigating = false;
+    }, 2000);
+  }
+
   ngOnDestroy(): void {
+    this.stopMovingNode();
+
+    // Cancel any pending wheel animation frame
+    if (this.wheelAnimationFrame) {
+      cancelAnimationFrame(this.wheelAnimationFrame);
+      this.wheelAnimationFrame = null;
+    }
+
+    // Clear keyboard navigation timeout
+    if (this.keyboardNavigationTimeout) {
+      clearTimeout(this.keyboardNavigationTimeout);
+      this.keyboardNavigationTimeout = null;
+    }
+
     // HostListeners are automatically cleaned up by Angular
     // No manual cleanup needed for document event listeners
   }
