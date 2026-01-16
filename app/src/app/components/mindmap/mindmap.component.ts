@@ -3,10 +3,10 @@ import { AppStateService } from '../../services/app-state.service';
 import { FileService } from '../../services/file.service';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { HelpModalComponent } from '../help-modal/help-modal.component';
+import { KeyboardShortcutService, KeyCommand } from '../../services/keyboard-shortcut.service';
 
 @Component({
-  selector: 'app-mindmap',
-  standalone: true,
+  selector: 'app-mindmap',  standalone: true,
   templateUrl: './mindmap.component.html',
   styleUrl: './mindmap.component.scss'
 })
@@ -16,6 +16,7 @@ import { HelpModalComponent } from '../help-modal/help-modal.component';
   @ViewChild('mindmapContainer') mindmapContainer!: ElementRef<HTMLElement>;
 
   private modalService = inject(NgbModal);
+  private shortcutService = inject(KeyboardShortcutService);
 
   isDragging = false;
   draggedNodeId: string | null = null;
@@ -120,68 +121,168 @@ import { HelpModalComponent } from '../help-modal/help-modal.component';
     const cmdOrCtrl = isMac ? event.metaKey : event.ctrlKey;
     const shift = event.shiftKey;
 
-    switch (event.key) {
-      // Navigation & Movement
-      case 'ArrowUp':
+    const command = this.shortcutService.getKeyCommand(event);
+
+    if (!command) return;
+
+    // Handle commands
+    switch (command) {
+      // --- Navigation ---
+      case KeyCommand.NAVIGATE_UP:
         event.preventDefault();
         this.setKeyboardNavigating();
-        if (cmdOrCtrl) {
-          const selectedId = this.appState.selectedNodeId();
-          if (selectedId) {
-            this.pressedArrowKeys.add('ArrowUp');
-            this.startMovingNode(selectedId);
-          }
-        } else {
-          shift ? this.quickAddChild('top') : this.navigateFocus('top');
+        this.navigateFocus('top');
+        break;
+      case KeyCommand.NAVIGATE_DOWN:
+        event.preventDefault();
+        this.setKeyboardNavigating();
+        this.navigateFocus('bottom');
+        break;
+      case KeyCommand.NAVIGATE_LEFT:
+        event.preventDefault();
+        this.setKeyboardNavigating();
+        this.navigateFocus('left');
+        break;
+      case KeyCommand.NAVIGATE_RIGHT:
+        event.preventDefault();
+        this.setKeyboardNavigating();
+        this.navigateFocus('right');
+        break;
+
+      // --- Node Movement (Ctrl+Arrow) ---
+      case KeyCommand.MOVE_UP:
+        event.preventDefault();
+        this.setKeyboardNavigating();
+        if (this.appState.selectedNodeId()) {
+          this.pressedArrowKeys.add('ArrowUp');
+          this.startMovingNode(this.appState.selectedNodeId()!);
         }
         break;
-      case 'ArrowDown':
+      case KeyCommand.MOVE_DOWN:
         event.preventDefault();
         this.setKeyboardNavigating();
-        if (cmdOrCtrl) {
-          const selectedId = this.appState.selectedNodeId();
-          if (selectedId) {
-            this.pressedArrowKeys.add('ArrowDown');
-            this.startMovingNode(selectedId);
-          }
-        } else {
-          shift ? this.quickAddChild('bottom') : this.navigateFocus('bottom');
+        if (this.appState.selectedNodeId()) {
+          this.pressedArrowKeys.add('ArrowDown');
+          this.startMovingNode(this.appState.selectedNodeId()!);
         }
         break;
-      case 'ArrowLeft':
+      case KeyCommand.MOVE_LEFT:
         event.preventDefault();
         this.setKeyboardNavigating();
-        if (cmdOrCtrl) {
-          const selectedId = this.appState.selectedNodeId();
-          if (selectedId) {
-            this.pressedArrowKeys.add('ArrowLeft');
-            this.startMovingNode(selectedId);
-          }
-        } else {
-          shift ? this.quickAddChild('left') : this.navigateFocus('left');
+        if (this.appState.selectedNodeId()) {
+          this.pressedArrowKeys.add('ArrowLeft');
+          this.startMovingNode(this.appState.selectedNodeId()!);
         }
         break;
-      case 'ArrowRight':
+      case KeyCommand.MOVE_RIGHT:
         event.preventDefault();
         this.setKeyboardNavigating();
-        if (cmdOrCtrl) {
-          const selectedId = this.appState.selectedNodeId();
-          if (selectedId) {
-            this.pressedArrowKeys.add('ArrowRight');
-            this.startMovingNode(selectedId);
-          }
-        } else {
-          shift ? this.quickAddChild('right') : this.navigateFocus('right');
+        if (this.appState.selectedNodeId()) {
+          this.pressedArrowKeys.add('ArrowRight');
+          this.startMovingNode(this.appState.selectedNodeId()!);
         }
         break;
 
-      // Creation & Editing
-      case 'Tab':
+      // --- Hierarchy ---
+      case KeyCommand.PROMOTE_NODE:
+        event.preventDefault();
+        if (this.appState.selectedNodeId()) {
+          this.appState.promoteNode(this.appState.selectedNodeId()!);
+        }
+        break;
+      case KeyCommand.DEMOTE_NODE:
+        event.preventDefault();
+        if (this.appState.selectedNodeId()) {
+          this.appState.demoteNode(this.appState.selectedNodeId()!);
+        }
+        break;
+      
+      case KeyCommand.TOGGLE_FOLD:
+        event.preventDefault();
+        if (this.appState.selectedNodeId()) {
+          this.appState.toggleNodeCollapse(this.appState.selectedNodeId()!);
+        }
+        break;
+
+      case KeyCommand.EXPAND_ALL:
+        event.preventDefault();
+        this.appState.expandAll();
+        break;
+      case KeyCommand.SET_DEPTH_1:
+        event.preventDefault();
+        this.appState.setGlobalCollapseLevel(1);
+        break;
+      case KeyCommand.SET_DEPTH_2:
+        event.preventDefault();
+        this.appState.setGlobalCollapseLevel(2);
+        break;
+      case KeyCommand.SET_DEPTH_3:
+        event.preventDefault();
+        this.appState.setGlobalCollapseLevel(3);
+        break;
+      case KeyCommand.SET_DEPTH_4:
+        event.preventDefault();
+        this.appState.setGlobalCollapseLevel(4);
+        break;
+      case KeyCommand.SET_DEPTH_5:
+        event.preventDefault();
+        this.appState.setGlobalCollapseLevel(5);
+        break;
+
+      case KeyCommand.LOCK_LEVEL_1:
+        event.preventDefault();
+        this.appState.setNavigationLockLevel(1);
+        break;
+      case KeyCommand.LOCK_LEVEL_2:
+        event.preventDefault();
+        this.appState.setNavigationLockLevel(2);
+        break;
+      case KeyCommand.LOCK_LEVEL_3:
+        event.preventDefault();
+        this.appState.setNavigationLockLevel(3);
+        break;
+      case KeyCommand.LOCK_LEVEL_4:
+        event.preventDefault();
+        this.appState.setNavigationLockLevel(4);
+        break;
+      case KeyCommand.LOCK_LEVEL_5:
+        event.preventDefault();
+        this.appState.setNavigationLockLevel(5);
+        break;
+      case KeyCommand.CLEAR_LOCK:
+        event.preventDefault();
+        this.appState.setNavigationLockLevel(null);
+        break;
+
+      // --- Quick Add (Shift+Arrow) ---
+      case KeyCommand.QUICK_ADD_TOP:
+        event.preventDefault();
+        this.setKeyboardNavigating();
+        this.quickAddChild('top');
+        break;
+      case KeyCommand.QUICK_ADD_BOTTOM:
+        event.preventDefault();
+        this.setKeyboardNavigating();
+        this.quickAddChild('bottom');
+        break;
+      case KeyCommand.QUICK_ADD_LEFT:
+        event.preventDefault();
+        this.setKeyboardNavigating();
+        this.quickAddChild('left');
+        break;
+      case KeyCommand.QUICK_ADD_RIGHT:
+        event.preventDefault();
+        this.setKeyboardNavigating();
+        this.quickAddChild('right');
+        break;
+
+      // --- Editing & Creation ---
+      case KeyCommand.SMART_TAB:
         event.preventDefault();
         this.handleTabKey();
         break;
-        
-      case 'Enter': {
+
+      case KeyCommand.EDIT_NODE: {
         event.preventDefault();
         const selectedId = this.appState.selectedNodeId();
         if (selectedId) {
@@ -190,120 +291,72 @@ import { HelpModalComponent } from '../help-modal/help-modal.component';
         break;
       }
 
-      case 'F2': {
+      // --- Deletion ---
+      case KeyCommand.DELETE_NODE:
+        if (this.appState.selectedNodeId()) {
+          event.preventDefault();
+          this.handleSmartDelete();
+        }
+        break;
+
+      // --- History ---
+      case KeyCommand.UNDO:
         event.preventDefault();
-        const selectedId = this.appState.selectedNodeId();
-        if (selectedId) {
-          this.enableEditMode(selectedId);
-        }
+        this.appState.undo();
         break;
-      }
-
-      case 'Delete':
-      case 'Backspace':
-      case '-':
-      case '_':
-        if (!cmdOrCtrl && !shift) {
-          // Only delete if we have a selection
-          if (this.appState.selectedNodeId()) {
-            event.preventDefault();
-            this.handleSmartDelete();
-          }
-        }
+      case KeyCommand.REDO:
+        event.preventDefault();
+        this.appState.redo();
         break;
 
-      // Standard Shortcuts
-      case 'z':
-      case 'Z':
-        if (cmdOrCtrl && !shift) {
-          event.preventDefault();
-          this.appState.undo();
-        } else if (cmdOrCtrl && shift) {
-          event.preventDefault();
-          this.appState.redo();
-        }
+      // --- File Ops ---
+      case KeyCommand.EXPORT:
+        event.preventDefault();
+        this.fileService.export();
+        break;
+      case KeyCommand.IMPORT:
+        event.preventDefault();
+        this.uploadMindMap();
+        break;
+      case KeyCommand.HELP:
+        event.preventDefault();
+        this.openHelpModal();
         break;
 
-      case 'y':
-      case 'Y':
-        if (cmdOrCtrl && !shift) {
-          event.preventDefault();
-          this.appState.redo();
-        }
+      // --- Styling ---
+      case KeyCommand.BOLD:
+        event.preventDefault();
+        this.toggleBold();
+        break;
+      case KeyCommand.ITALIC:
+        event.preventDefault();
+        this.toggleItalic();
+        break;
+      case KeyCommand.CYCLE_SHAPE:
+        event.preventDefault();
+        this.cycleShape();
+        break;
+      case KeyCommand.CYCLE_COLOR:
+        event.preventDefault();
+        this.cycleColor();
         break;
 
-      case 's':
-      case 'S':
-        if (cmdOrCtrl) {
-          event.preventDefault();
-          this.fileService.export();
-        } else if (shift) {
-          event.preventDefault();
-          this.cycleShape();
-        }
-        break;
-
-      case 'o':
-      case 'O':
-        if (cmdOrCtrl) {
-          event.preventDefault();
-          this.uploadMindMap();
-        }
-        break;
-
-      case 'k':
-      case 'K':
-        if (cmdOrCtrl) {
-          event.preventDefault();
-          this.openHelpModal();
-        }
-        break;
-
-      // Formatting & Styling
-      case 'b':
-      case 'B':
-        if (cmdOrCtrl) {
-          event.preventDefault();
-          this.toggleBold();
-        }
-        break;
-      
-      case 'i':
-      case 'I':
-        if (cmdOrCtrl) {
-          event.preventDefault();
-          this.toggleItalic();
-        }
-        break;
-      
-      // 's' case merged above to avoid duplication
-      
-      case 'c':
-      case 'C':
-        if (shift) {
-          event.preventDefault();
-          this.cycleColor();
-        }
-        break;
-
-      // View Control
-      case '0':
+      // --- View ---
+      case KeyCommand.RESET_VIEW:
         if (!isEditingNode) {
           event.preventDefault();
           this.resetView();
         }
         break;
-        
-      case ' ':
+      case KeyCommand.CENTER_VIEW:
         if (!isEditingNode) {
           event.preventDefault();
           this.centerOnSelection();
         }
         break;
 
-      // Multi-select
-      case 'm':
-      case 'M':
+      // --- Selection ---
+      case KeyCommand.TOGGLE_SELECTION:
         if (!isEditingNode) {
           event.preventDefault();
           const selectedId = this.appState.selectedNodeId();
@@ -312,17 +365,14 @@ import { HelpModalComponent } from '../help-modal/help-modal.component';
           }
         }
         break;
-
-      case 'Escape':
+      case KeyCommand.CLEAR_SELECTION:
         if (!isEditingNode) {
           event.preventDefault();
           this.appState.clearSelection();
         }
         break;
-
-      case 'a':
-      case 'A':
-        if (cmdOrCtrl && !isEditingNode) {
+      case KeyCommand.SELECT_ALL:
+        if (!isEditingNode) {
           event.preventDefault();
           this.appState.selectAll();
         }
@@ -455,10 +505,20 @@ import { HelpModalComponent } from '../help-modal/help-modal.component';
     const current = this.appState.nodes().find(n => n.id === selectedId);
     if (!current) return;
 
-    // Filter candidates based on direction
-    const candidates = this.appState.nodes().filter(node => {
+    // Filter candidates based on direction AND level-lock
+    const lockLevel = this.appState.navigationLockLevel();
+
+    // Use visibleNodes() to ensure we don't navigate to hidden/collapsed nodes
+    const candidates = this.appState.visibleNodes().filter(node => {
       if (node.id === current.id) return false;
       
+      // Level-lock constraint
+      if (lockLevel !== null) {
+        if (this.appState.getNodeDepth(node.id) !== lockLevel) {
+          return false;
+        }
+      }
+
       const dx = node.x - current.x;
       const dy = node.y - current.y;
 

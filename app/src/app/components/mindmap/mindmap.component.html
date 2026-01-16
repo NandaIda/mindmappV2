@@ -1,4 +1,13 @@
   <div #mindmapContainer class="mindmap-container" [class.keyboard-navigating]="isKeyboardNavigating">
+  
+  <!-- Lock Mode Indicator -->
+  @if (appState.navigationLockLevel() !== null) {
+    <div class="lock-indicator-overlay">
+      Locked to Level {{ appState.navigationLockLevel() }}
+      <span class="lock-hint">(Shift+0 to clear)</span>
+    </div>
+  }
+
   <svg #svgLayer class="connections">
     @for (conn of appState.getConnections(); track conn.child.id) {
       <path
@@ -8,11 +17,14 @@
     }
   </svg>
   <div #nodesLayer class="nodes-layer">
-    @for (node of appState.nodes(); track node.id) {
+    @for (node of appState.visibleNodes(); track node.id) {
       <div
         class="node"
         [attr.data-node-id]="node.id"
         [class.root-node]="node.parentId === null"
+        [class.collapsed]="node.isCollapsed"
+        [class.lock-dimmed]="appState.navigationLockLevel() !== null && appState.getNodeDepth(node.id) !== appState.navigationLockLevel()"
+        [class.lock-active]="appState.navigationLockLevel() !== null && appState.getNodeDepth(node.id) === appState.navigationLockLevel()"
         [class.selected]="appState.selectedNodeId() === node.id && !appState.isNodeSelected(node.id)"
         [class.multi-selected]="appState.isNodeSelected(node.id)"
         [class.focused]="appState.selectedNodeId() === node.id && appState.isNodeSelected(node.id)"

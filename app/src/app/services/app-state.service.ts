@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, computed } from '@angular/core';
 
 export interface NodeStyle {
   fontWeight?: string;
@@ -17,6 +17,7 @@ export interface MindMapNode {
   width?: number;
   height?: number;
   style?: NodeStyle;
+  isCollapsed?: boolean;
 }
 
 interface HistoryEntry {
@@ -33,7 +34,31 @@ export class AppStateService {
   nodes = signal<MindMapNode[]>([]);
   selectedNodeId = signal<string | null>(null); // Focused node for keyboard navigation
   selectedNodeIds = signal<Set<string>>(new Set()); // Multi-select support
+  navigationLockLevel = signal<number | null>(null); // Level-lock navigation state
+  globalCollapseLevel = signal<number | null>(null); // Current folding level (Ctrl+N)
   nodesLoadedFromStorage = false;
+
+  // Computed signal for visible nodes (handling folded branches)
+  visibleNodes = computed(() => {
+    const allNodes = this.nodes();
+    const nodeMap = new Map(allNodes.map(n => [n.id, n]));
+    
+    // Helper to check visibility
+    const isVisible = (nodeId: string): boolean => {
+      const node = nodeMap.get(nodeId);
+      if (!node) return false;
+      if (!node.parentId) return true; // Root is always visible
+      
+      const parent = nodeMap.get(node.parentId);
+      if (!parent) return true; // Orphaned?
+      
+      if (parent.isCollapsed) return false; // Parent is collapsed, so I am hidden
+      
+      return isVisible(parent.id); // Check ancestor
+    };
+
+    return allNodes.filter(n => isVisible(n.id));
+  });
 
   // Undo/redo functionality
   private undoHistory: HistoryEntry[] = [];
@@ -263,6 +288,150 @@ export class AppStateService {
     this.addToHistory('create', nodesBefore);
 
     return newNode;
+  }
+
+  /**
+   * Demotes a node (makes it a child of its previous sibling).
+   * Analogous to Indent (Alt + Right).
+   */
+  demoteNode(nodeId: string): void {
+    const node = this.nodes().find(n => n.id === nodeId);
+    if (!node || !node.parentId) return; // Can't demote root
+
+    // Find all siblings in order
+    const siblings = this.nodes().filter(n => n.parentId === node.parentId);
+    // Sort logic? Currently we rely on creation order (array order).
+    // Let's stick to array index for "previous sibling".
+    const nodeIndex = siblings.findIndex(n => n.id === nodeId);
+    
+    if (nodeIndex <= 0) return; // No previous sibling to become parent of
+
+    const newParent = siblings[nodeIndex - 1];
+    
+    // Save state
+    const nodesBefore = [...this.nodes()];
+
+    this.nodes.update(nodes =>
+      nodes.map(n =>
+        n.id === nodeId ? { ...n, parentId: newParent.id } : n
+      )
+    );
+
+    this.addToHistory('move', nodesBefore);
+  }
+
+  /**
+   * Promotes a node (makes it a sibling of its parent).
+   * Analogous to Outdent (Alt + Left).
+   */
+  promoteNode(nodeId: string): void {
+    const node = this.nodes().find(n => n.id === nodeId);
+    if (!node || !node.parentId) return;
+
+    const parent = this.nodes().find(n => n.id === node.parentId);
+    if (!parent) return; // Should not happen
+
+    // If parent is root (has no parentId), we can't promote further 
+    // (unless we support multiple roots, but let's stick to single root for now)
+    if (!parent.parentId) return; 
+
+    // Save state
+    const nodesBefore = [...this.nodes()];
+
+    this.nodes.update(nodes =>
+      nodes.map(n =>
+        n.id === nodeId ? { ...n, parentId: parent.parentId } : n
+      )
+    );
+
+    this.addToHistory('move', nodesBefore);
+  }
+
+  getNodeDepth(nodeId: string): number {
+    const node = this.nodes().find(n => n.id === nodeId);
+    if (!node) return 0;
+    if (!node.parentId) return 0; // Root is depth 0 (or 1 depending on preference, let's say 0)
+    return 1 + this.getNodeDepth(node.parentId);
+  }
+
+  /**
+   * Toggles the collapsed state of a node
+   */
+  toggleNodeCollapse(nodeId: string): void {
+    const node = this.nodes().find(n => n.id === nodeId);
+    if (!node) return;
+
+    // Save state
+    const nodesBefore = [...this.nodes()];
+
+    this.nodes.update(nodes =>
+      nodes.map(n =>
+        n.id === nodeId ? { ...n, isCollapsed: !n.isCollapsed } : n
+      )
+    );
+
+    this.addToHistory('update', nodesBefore);
+  }
+
+  /**
+   * Sets the global collapse level (Ctrl + Number)
+   * Collapses all nodes at depth >= level
+   */
+  setGlobalCollapseLevel(level: number): void {
+    // Conflict Resolution: If we fold up to Level X, we cannot be locked to Level Y where Y > X
+    // because Level Y is now hidden. (Level X itself is visible as the leaf level)
+    const currentLock = this.navigationLockLevel();
+    if (currentLock !== null && currentLock > level) {
+      this.navigationLockLevel.set(null);
+    }
+    
+    this.globalCollapseLevel.set(level);
+
+    // Save state
+    const nodesBefore = [...this.nodes()];
+
+    this.nodes.update(nodes =>
+      nodes.map(n => {
+        const depth = this.getNodeDepth(n.id);
+        return {
+          ...n,
+          isCollapsed: depth >= level
+        };
+      })
+    );
+
+    this.addToHistory('update', nodesBefore);
+  }
+
+  /**
+   * Sets the navigation lock level (Shift + Number)
+   * Prevents locking to a level that is currently folded/hidden
+   */
+  setNavigationLockLevel(level: number | null): void {
+    if (level === null) {
+      this.navigationLockLevel.set(null);
+      return;
+    }
+
+    const currentFold = this.globalCollapseLevel();
+    
+    // Conflict Resolution: Cannot lock to Level Y if we are folded at Level X where Y > X
+    if (currentFold !== null && level > currentFold) {
+      // Block if attempting to lock to a hidden level
+      return;
+    }
+
+    this.navigationLockLevel.set(level);
+  }
+
+  /**
+   * Expands all nodes
+   */
+  expandAll(): void {
+    this.globalCollapseLevel.set(null);
+    const nodesBefore = [...this.nodes()];
+    this.nodes.update(nodes => nodes.map(n => ({ ...n, isCollapsed: false })));
+    this.addToHistory('update', nodesBefore);
   }
 
   deleteSelectedNode(selectedId: string): void {
@@ -508,7 +677,7 @@ export class AppStateService {
   }
 
   getConnections(): { parent: MindMapNode, child: MindMapNode }[] {
-    const nodesList = this.nodes();
+    const nodesList = this.visibleNodes(); // Use visible nodes only
     return nodesList.filter(node => node.parentId)
       .map(node => {
         const parent = nodesList.find(n => n.id === node.parentId);
