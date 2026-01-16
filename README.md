@@ -1,5 +1,7 @@
 # MindMapp V2
 
+Try out MindMapp V2 here: [https://mindmapp-v2.vercel.app](https://mindmapp-v2.vercel.app)
+
 Originated from - [https://github.com/cepa/mindmapp](https://github.com/cepa/mindmapp)
 
 An intuitive mind mapping application for organizing thoughts, brainstorming ideas, and creating visual representations of your concepts.
