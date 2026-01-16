@@ -626,4 +626,270 @@ export class AppStateService {
   getRedoHistoryLength(): number {
     return this.redoHistory.length;
   }
+
+  /**
+   * Auto-spread nodes using fractal/proportional allocation with 2D adaptive spacing
+   */
+  autoSpreadNodes(): void {
+    const nodesBefore = [...this.nodes()];
+
+    // Find root node
+    const rootNode = this.nodes().find(n => !n.parentId);
+    if (!rootNode) return;
+
+    // Center the root node at viewport center
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const centerX = viewportWidth / 2 - 75;
+    const centerY = viewportHeight / 2 - 25;
+
+    // Get all nodes organized by parent
+    const nodesByParent = new Map<string | null, MindMapNode[]>();
+    this.nodes().forEach(node => {
+      if (!nodesByParent.has(node.parentId)) {
+        nodesByParent.set(node.parentId, []);
+      }
+      nodesByParent.get(node.parentId)!.push(node);
+    });
+
+    // Count descendants for each node (for proportional space allocation)
+    const descendantCount = new Map<string, number>();
+
+    const countDescendants = (nodeId: string): number => {
+      if (descendantCount.has(nodeId)) {
+        return descendantCount.get(nodeId)!;
+      }
+
+      const children = nodesByParent.get(nodeId) || [];
+      let count = children.length;
+
+      for (const child of children) {
+        count += countDescendants(child.id);
+      }
+
+      descendantCount.set(nodeId, count);
+      return count;
+    };
+
+    // Calculate descendant counts for all nodes
+    countDescendants(rootNode.id);
+
+    // Track positioned nodes with dimensions
+    const positionedNodes = new Map<string, { x: number, y: number, width: number, height: number }>();
+
+    // Place root at center
+    positionedNodes.set(rootNode.id, {
+      x: centerX,
+      y: centerY,
+      width: rootNode.width || 100,
+      height: rootNode.height || 40
+    });
+
+    // Helper to check if angle is vertical (top or bottom)
+    const isVerticalAngle = (angle: number): boolean => {
+      const normalized = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      // Check if near top (around 3π/2) or bottom (around π/2)
+      return (normalized > Math.PI * 0.25 && normalized < Math.PI * 0.75) ||
+             (normalized > Math.PI * 1.25 && normalized < Math.PI * 1.75);
+    };
+
+    // Recursive function to position nodes with adaptive 2D spacing
+    const positionChildren = (
+      parentId: string,
+      parentX: number,
+      parentY: number,
+      startAngle: number,
+      endAngle: number,
+      depth: number
+    ) => {
+      const children = nodesByParent.get(parentId) || [];
+      if (children.length === 0) return;
+
+      // Sort children by their current angle to maintain visual consistency
+      const childrenWithAngles = children.map(child => {
+        const dx = child.x - parentX;
+        const dy = child.y - parentY;
+        const currentAngle = Math.atan2(dy, dx);
+        return { child, currentAngle };
+      });
+      childrenWithAngles.sort((a, b) => a.currentAngle - b.currentAngle);
+
+      // Calculate total descendants to determine proportional allocation
+      const totalDescendants = childrenWithAngles.reduce((sum, item) => {
+        return sum + (descendantCount.get(item.child.id) || 0) + 1;
+      }, 0);
+
+      // Calculate base radius with different scaling for first level vs deeper levels
+      let baseRadius: number;
+      let depthMultiplier: number;
+
+      if (depth === 1) {
+        // First level children: keep normal distance
+        baseRadius = 25;
+        depthMultiplier = 1;
+      } else {
+        // Second level and beyond: 
+        baseRadius = 25; 
+        depthMultiplier = Math.pow(0.5, depth - 1); 
+      }
+
+      // Calculate minimum radius needed to fit all children based on arc length
+      const angularSpan = endAngle - startAngle;
+      // Increase node width estimate for vertical positions
+      const avgNodeWidth = 5;
+      const minRadius = (children.length * avgNodeWidth) / angularSpan;
+
+      // Use the larger of the two radii
+      let radiusx = Math.max(baseRadius * depthMultiplier, minRadius) * (Math.random()+0.2);
+      let radiusy = Math.max(baseRadius * depthMultiplier, minRadius) * (Math.random()+0.2);
+
+      // Add organic randomization to first level only
+      const angleOffset = (depth === 1) ? (Math.random() - 0.5) * Math.PI / 6 : 0; // ±15 degrees
+
+      // Allocate angular space proportionally
+      let currentAngle = startAngle;
+      const childPositions: Array<{ child: MindMapNode, x: number, y: number, angle: number, angularPortion: number }> = [];
+
+      for (const item of childrenWithAngles) {
+        const childDescendants = (descendantCount.get(item.child.id) || 0) + 1;
+        const angularPortion = ((endAngle - startAngle) * childDescendants) / totalDescendants;
+
+        // Position this child at the center of its allocated angular space
+        let childAngle = currentAngle + angularPortion;
+
+        // Apply randomization for first level
+        if (depth === 1) {
+          childAngle += angleOffset;
+        }
+
+        // Calculate initial position
+        let childX = parentX + Math.cos(childAngle) * radiusx;
+        let childY = parentY + Math.sin(childAngle) * radiusy;
+
+        childPositions.push({
+          child: item.child,
+          x: childX,
+          y: childY,
+          angle: childAngle,
+          angularPortion
+        });
+
+        currentAngle += angularPortion;
+      }
+
+      // Check for collisions and adjust radius if needed
+      let hasCollision = true;
+      let maxIterations = 15; // Increased from 10
+      let iteration = 0;
+
+      while (hasCollision && iteration < maxIterations) {
+        hasCollision = false;
+        iteration++;
+
+        // Check collisions between all positioned nodes
+        for (let i = 0; i < childPositions.length; i++) {
+          const pos1 = childPositions[i];
+          const isPos1Vertical = isVerticalAngle(pos1.angle);
+
+          // Check against all other positioned nodes (not just siblings)
+          for (const [existingId, existingPos] of positionedNodes.entries()) {
+            if (existingId === parentId) continue;
+
+            const dx = pos1.x - existingPos.x;
+            const dy = pos1.y - existingPos.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            // More aggressive spacing for vertical positions
+            const minDistance = isPos1Vertical ? 180 : 110; // Increased vertical from 140 to 180
+
+            if (distance < minDistance) {
+              hasCollision = true;
+              break;
+            }
+          }
+
+          if (hasCollision) break;
+
+          // Also check against siblings
+          for (let j = i + 1; j < childPositions.length; j++) {
+            const pos2 = childPositions[j];
+            const isPos2Vertical = isVerticalAngle(pos2.angle);
+
+            const dx = pos1.x - pos2.x;
+            const dy = pos1.y - pos2.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            // If both are vertical, need even more space
+            let minDistance: number;
+            if (isPos1Vertical && isPos2Vertical) {
+              minDistance = 200; // Both vertical
+            } else if (isPos1Vertical || isPos2Vertical) {
+              minDistance = 160; // One vertical
+            } else {
+              minDistance = 110; // Neither vertical
+            }
+
+            if (distance < minDistance) {
+              hasCollision = true;
+              break;
+            }
+          }
+
+          if (hasCollision) break;
+        }
+
+        // If collision detected, increase radius and recalculate
+        if (hasCollision) {
+          radiusx *= 1.25; // Increased from 1.2
+          radiusy *= 1.25; // Increased from 1.2
+
+          for (const pos of childPositions) {
+            pos.x = parentX + Math.cos(pos.angle) * radiusx;
+            pos.y = parentY + Math.sin(pos.angle) * radiusy;
+          }
+        }
+      }
+
+      // Commit positions and recurse
+      let currentAngleForRecursion = startAngle;
+      for (const pos of childPositions) {
+        const childDescendants = (descendantCount.get(pos.child.id) || 0) + 1;
+        const angularPortion = ((endAngle - startAngle) * childDescendants) / totalDescendants;
+
+        positionedNodes.set(pos.child.id, {
+          x: pos.x,
+          y: pos.y,
+          width: pos.child.width || 100,
+          height: pos.child.height || 40
+        });
+
+        // Recursively position this child's descendants within its allocated angular space
+        positionChildren(
+          pos.child.id,
+          pos.x,
+          pos.y,
+          currentAngleForRecursion,
+          currentAngleForRecursion + angularPortion,
+          depth + 1
+        );
+
+        currentAngleForRecursion += angularPortion;
+      }
+    };
+
+    // Start the recursive positioning from the root with random angle offset
+    const initialAngleOffset = (Math.PI / 6) + Math.random() * (Math.PI / 9); // Random 30-50 degree rotation
+    positionChildren(rootNode.id, centerX, centerY, initialAngleOffset, initialAngleOffset + 2 * Math.PI, 1);
+
+    // Update all node positions
+    this.nodes.update(nodes =>
+      nodes.map(n => {
+        const newPos = positionedNodes.get(n.id);
+        return newPos ? { ...n, x: newPos.x, y: newPos.y } : n;
+      })
+    );
+
+    // Add to history
+    this.addToHistory('move', nodesBefore);
+  }
 }

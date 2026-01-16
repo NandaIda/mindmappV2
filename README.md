@@ -114,7 +114,6 @@ docker run -p 8080:8080 mindmapp
 | **Creation** | | |
 | Auto-Add Child | `Tab` | `Tab` |
 | Add Child in Direction | `Shift + Arrow` | `Shift + Arrow` |
-| Add Sibling | `Enter` (when not editing) | `Enter` (when not editing) |
 | **Editing** | | |
 | Edit Text | `Double-click` / `F2` / `Enter` | `Double-click` / `F2` / `Enter` |
 | Finish Editing | `Enter` / `Esc` | `Enter` / `Esc` |

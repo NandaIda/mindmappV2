@@ -1448,6 +1448,10 @@ import { HelpModalComponent } from '../help-modal/help-modal.component';
     this.updateTransform();
   }
 
+  autoSpread() {
+    this.appState.autoSpreadNodes();
+  }
+
   /**
    * Track keyboard navigation to hide hover effects
    */

@@ -42,6 +42,12 @@ export class NavbarComponent {
     }
   }
 
+  autoSpread() {
+    if (this.mindmap) {
+      this.mindmap.autoSpread();
+    }
+  }
+
   fitView() {
     if (this.mindmap) {
       this.mindmap.fitView();
