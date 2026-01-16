@@ -6,9 +6,7 @@ An intuitive mind mapping application for organizing thoughts, brainstorming ide
 
 Try out MindMapp here: 
 
-![](app/public/ogimage.jpg)
-
-MindMapp was created by AI. Less than 1% of the code was written by human being.
+![](app/public/ogimage.png)
 
 ## Features
 
@@ -165,13 +163,9 @@ MindMapp uses a versioned JSON format (.mind files) for storing mind maps:
 }
 ```
 
-See [MINDFILE.md](MINDFILE.md) for complete specification.
-
 ## Documentation
 
 - [GEMINI.md](GEMINI.md) - System context and architecture
-- [MINDFILE.md](MINDFILE.md) - Data model specification
-- [VIBE.md](VIBE.md) - Development notes and requirements
 
 ## License
 
