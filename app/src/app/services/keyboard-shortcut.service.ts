@@ -67,7 +67,8 @@ export enum KeyCommand {
   // Selection
   TOGGLE_SELECTION = 'TOGGLE_SELECTION', // 'm'
   CLEAR_SELECTION = 'CLEAR_SELECTION',   // Escape
-  SELECT_ALL = 'SELECT_ALL'              // Ctrl+A
+  SELECT_ALL = 'SELECT_ALL',              // Ctrl+A
+  SEARCH = 'SEARCH'                      // /
 }
 
 @Injectable({
@@ -181,6 +182,7 @@ export class KeyboardShortcutService {
       return KeyCommand.TOGGLE_FOLD;
     }
     if (key === 'm' || key === 'M') return KeyCommand.TOGGLE_SELECTION;
+    if (key === '/') return KeyCommand.SEARCH;
     if (key === 'Escape') return KeyCommand.CLEAR_SELECTION;
     if ((key === 'a' || key === 'A') && cmdOrCtrl) return KeyCommand.SELECT_ALL;
 

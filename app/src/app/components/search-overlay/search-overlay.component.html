@@ -1,0 +1,34 @@
+<div class="search-overlay-backdrop" (click)="close.emit()">
+  <div class="search-container" (click)="$event.stopPropagation()">
+    <div class="search-input-wrapper">
+      <i class="fas fa-search search-icon"></i>
+      <input 
+        #searchInput
+        type="text" 
+        class="search-input" 
+        placeholder="Search ideas..." 
+        [(ngModel)]="searchQuery"
+        (ngModelChange)="selectedIndex.set(0)"
+        (keydown)="onKeyDown($event)"
+      >
+      <kbd class="esc-hint">ESC</kbd>
+    </div>
+
+    @if (searchResults().length > 0) {
+      <div class="search-results">
+        @for (node of searchResults(); track node.id; let i = $index) {
+          <div 
+            class="search-item" 
+            [class.active]="i === selectedIndex()"
+            (click)="selectNode(node.id)"
+          >
+            <div class="item-text">{{ node.text || 'Untitled Idea' }}</div>
+            <div class="item-meta">Level {{ appState.getNodeDepth(node.id) }}</div>
+          </div>
+        }
+      </div>
+    } @else if (searchQuery().length > 0) {
+      <div class="no-results">No ideas found matching "{{ searchQuery() }}"</div>
+    }
+  </div>
+</div>

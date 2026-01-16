@@ -1,12 +1,15 @@
-import { Component, ViewChild, ElementRef, AfterViewInit, Input, HostListener, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, ViewChild, ElementRef, AfterViewInit, Input, HostListener, OnDestroy, ChangeDetectorRef, inject, signal } from '@angular/core';
 import { AppStateService } from '../../services/app-state.service';
 import { FileService } from '../../services/file.service';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { HelpModalComponent } from '../help-modal/help-modal.component';
 import { KeyboardShortcutService, KeyCommand } from '../../services/keyboard-shortcut.service';
+import { SearchOverlayComponent } from '../search-overlay/search-overlay.component';
 
 @Component({
-  selector: 'app-mindmap',  standalone: true,
+  selector: 'app-mindmap',
+  standalone: true,
+  imports: [SearchOverlayComponent],
   templateUrl: './mindmap.component.html',
   styleUrl: './mindmap.component.scss'
 })
@@ -69,6 +72,9 @@ import { KeyboardShortcutService, KeyCommand } from '../../services/keyboard-sho
   
   // Track which node is being edited (for iOS keyboard support)
   editingNodeId: string | null = null;
+  
+  // Search state
+  isSearchOpen = signal(false);
 
   // Keyboard node movement
   private moveInterval: any = null;
@@ -377,7 +383,39 @@ import { KeyboardShortcutService, KeyCommand } from '../../services/keyboard-sho
           this.appState.selectAll();
         }
         break;
+      
+      case KeyCommand.SEARCH:
+        if (!isEditingNode) {
+          event.preventDefault();
+          this.isSearchOpen.set(true);
+        }
+        break;
     }
+  }
+
+  jumpToNode(nodeId: string) {
+    this.isSearchOpen.set(false);
+    this.appState.selectedNodeId.set(nodeId);
+    
+    // Ensure the node is visible (expand ancestors if necessary)
+    // For now, our system hides nodes globally, so we should expand all 
+    // or expand only necessary branches. Let's expand all for maximum simplicity.
+    this.appState.expandAll();
+
+    // Small delay to allow expansion and DOM update
+    setTimeout(() => {
+      this.centerOnSelection();
+      
+      // Flash highlight effect
+      const element = document.querySelector(`[data-node-id="${nodeId}"]`);
+      if (element) {
+        element.animate([
+          { boxShadow: '0 0 0 0px rgba(239, 68, 68, 0)' },
+          { boxShadow: '0 0 0 20px rgba(239, 68, 68, 0.4)', offset: 0.5 },
+          { boxShadow: '0 0 0 0px rgba(239, 68, 68, 0)' }
+        ], { duration: 1000, easing: 'ease-out' });
+      }
+    }, 50);
   }
 
   // --- Styling Helpers ---

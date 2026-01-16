@@ -1,13 +1,20 @@
-  <div #mindmapContainer class="mindmap-container" [class.keyboard-navigating]="isKeyboardNavigating">
-  
-  <!-- Lock Mode Indicator -->
-  @if (appState.navigationLockLevel() !== null) {
-    <div class="lock-indicator-overlay">
-      Locked to Level {{ appState.navigationLockLevel() }}
-      <span class="lock-hint">(Shift+0 to clear)</span>
-    </div>
-  }
+  <!-- Fixed UI Layer (Not affected by Pan/Zoom) -->
+@if (isSearchOpen()) {
+  <app-search-overlay 
+    (nodeSelected)="jumpToNode($event)" 
+    (close)="isSearchOpen.set(false)"
+  ></app-search-overlay>
+}
 
+@if (appState.navigationLockLevel() !== null) {
+  <div class="lock-indicator-overlay">
+    Locked to Level {{ appState.navigationLockLevel() }}
+    <span class="lock-hint">(Shift+0 to clear)</span>
+  </div>
+}
+
+<!-- Pannable/Zoomable Canvas Layer -->
+<div #mindmapContainer class="mindmap-container" [class.keyboard-navigating]="isKeyboardNavigating">
   <svg #svgLayer class="connections">
     @for (conn of appState.getConnections(); track conn.child.id) {
       <path
