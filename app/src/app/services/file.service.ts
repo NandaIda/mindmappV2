@@ -29,10 +29,12 @@ interface MindMapFile {
     type: 'root' | 'topic';
     position: { x: number; y: number };
     style: {
-      color: string;
-      backgroundColor: string;
-      fontSize: number;
-      fontWeight: string;
+      color?: string;
+      backgroundColor?: string;
+      fontSize?: number;
+      fontWeight?: string;
+      fontStyle?: string;
+      shape?: 'rect' | 'rounded' | 'pill' | 'diamond';
     };
     collapsed: boolean;
     extra?: any;
@@ -67,10 +69,12 @@ export class FileService {
         type: node.parentId === null ? 'root' : 'topic',
         position: { x: node.x, y: node.y },
         style: {
-          color: '#000000',
-          backgroundColor: '#ffffff',
+          color: node.style?.color || '#000000',
+          backgroundColor: node.style?.backgroundColor || '#ffffff',
           fontSize: 14,
-          fontWeight: node.parentId === null ? 'bold' : 'normal'
+          fontWeight: node.style?.fontWeight || (node.parentId === null ? 'bold' : 'normal'),
+          fontStyle: node.style?.fontStyle || 'normal',
+          shape: node.style?.shape || 'rounded'
         },
         collapsed: false,
         extra: {}
@@ -116,7 +120,14 @@ export class FileService {
             parentId: node.parentId,
             text: node.text,
             x: node.position?.x || 0,
-            y: node.position?.y || 0
+            y: node.position?.y || 0,
+            style: {
+              color: node.style?.color,
+              backgroundColor: node.style?.backgroundColor,
+              fontWeight: node.style?.fontWeight,
+              fontStyle: node.style?.fontStyle,
+              shape: node.style?.shape
+            }
           }));
 
           // Update app state
