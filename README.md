@@ -22,6 +22,7 @@ MindMapp is designed for **complete keyboard control** - you can create, navigat
 - **Precision Control**: Ctrl+Arrow moves nodes with accelerating speed for pixel-perfect positioning
 
 ### Enhanced Input Support
+- **Spotlight Search**: Press `/` for a floating, transparent search bar to instantly find and teleport to ideas (VIM-style)
 - **Smooth Touchpad**: True diagonal two-finger panning with balanced horizontal/vertical speeds
 - **Pinch Zoom**: Ctrl+Scroll for zoom (intercepts browser zoom for app-level control)
 - **Touch Support**: Full mobile compatibility with pinch-to-zoom and touch drag
@@ -105,6 +106,7 @@ docker run -p 8080:8080 mindmapp
 | Precision Move Node(s) | `Ctrl + Arrow` | `Cmd + Arrow` |
 | Center Selection | `Space` | `Space` |
 | Reset View | `0` | `0` |
+| Search & Jump | `/` | `/` |
 | **Multi-Select (Keyboard Only!)** | | |
 | Mark/Unmark Node | `M` | `M` |
 | Select All | `Ctrl+A` | `Cmd+A` |
@@ -118,6 +120,15 @@ docker run -p 8080:8080 mindmapp
 | Edit Text | `Double-click` / `F2` / `Enter` | `Double-click` / `F2` / `Enter` |
 | Finish Editing | `Enter` / `Esc` | `Enter` / `Esc` |
 | Delete Node(s) | `Del` / `Backspace` / `-` | `Del` / `Backspace` / `-` |
+| **Structure (VIM-like)** | | |
+| Promote (Move Up Hierarchy) | `Alt + Left` | `Alt + Left` |
+| Demote (Move Down Hierarchy) | `Alt + Right` | `Alt + Right` |
+| Toggle Fold/Collapse | `F` or `C` | `F` or `C` |
+| **View Control** | | |
+| Fold to Level 1-5 | `Ctrl + 1-5` | `Cmd + 1-5` |
+| Expand All | `Ctrl + 0` | `Cmd + 0` |
+| Lock Navigation to Level 1-5 | `Shift + 1-5` | `Shift + 1-5` |
+| Clear Navigation Lock | `Shift + 0` | `Shift + 0` |
 | **Styling** | | |
 | Toggle Bold | `Ctrl + B` | `Cmd + B` |
 | Toggle Italic | `Ctrl + I` | `Cmd + I` |
@@ -126,8 +137,10 @@ docker run -p 8080:8080 mindmapp
 | **System** | | |
 | Undo | `Ctrl+Z` | `Cmd+Z` |
 | Redo | `Ctrl+Y` | `Cmd+Shift+Z` |
-| Save | `Ctrl+S` | `Cmd+S` |
-| Load | `Ctrl+O` | `Cmd+O` |
+| Save (.mind) | `Ctrl+S` | `Cmd+S` |
+| Load (.mind) | `Ctrl+O` | `Cmd+O` |
+| Export Mermaid | `Ctrl+Alt+E` | `Cmd+Alt+E` |
+| Import Mermaid | `Ctrl+Alt+I` | `Cmd+Alt+I` |
 | Help | `Ctrl+K` | `Cmd+K` |
 
 ### Multi-Select Workflow Example

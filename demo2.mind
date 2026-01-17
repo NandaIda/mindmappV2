@@ -1,0 +1,510 @@
+{
+  "version": "1",
+  "metadata": {
+    "title": "Mind Map",
+    "created": "2026-01-16T16:43:18.741Z",
+    "modified": "2026-01-16T16:43:18.741Z"
+  },
+  "nodes": [
+    {
+      "id": "node-1768569763493-248",
+      "parentId": null,
+      "text": "CRM Project",
+      "type": "root",
+      "position": {
+        "x": 967.5,
+        "y": 555.5
+      },
+      "style": {
+        "color": "#1f2937",
+        "backgroundColor": "#ffffff",
+        "fontSize": 14,
+        "fontWeight": "bold",
+        "fontStyle": "normal",
+        "shape": "diamond"
+      },
+      "collapsed": false,
+      "extra": {}
+    },
+    {
+      "id": "node-1768573318663-69",
+      "parentId": "node-1768569763493-248",
+      "text": "Post Launch Review",
+      "type": "topic",
+      "position": {
+        "x": 1296.1087705624186,
+        "y": 497.8708418688262
+      },
+      "style": {
+        "color": "#1e40af",
+        "backgroundColor": "#eff6ff",
+        "fontSize": 14,
+        "fontWeight": "bold",
+        "fontStyle": "normal",
+        "shape": "rounded"
+      },
+      "collapsed": false,
+      "extra": {}
+    },
+    {
+      "id": "node-1768573351654-165",
+      "parentId": "node-1768573318663-69",
+      "text": "User Feedback",
+      "type": "topic",
+      "position": {
+        "x": 1469.8192981066418,
+        "y": 420.7640283875895
+      },
+      "style": {
+        "color": "#1e40af",
+        "backgroundColor": "#eff6ff",
+        "fontSize": 14,
+        "fontWeight": "bold",
+        "fontStyle": "normal",
+        "shape": "rounded"
+      },
+      "collapsed": false,
+      "extra": {}
+    },
+    {
+      "id": "node-1768573359286-542",
+      "parentId": "node-1768573318663-69",
+      "text": "Performance Matrics",
+      "type": "topic",
+      "position": {
+        "x": 1179.593325288947,
+        "y": 306.93544009478603
+      },
+      "style": {
+        "color": "#1e40af",
+        "backgroundColor": "#eff6ff",
+        "fontSize": 14,
+        "fontWeight": "bold",
+        "fontStyle": "normal",
+        "shape": "rounded"
+      },
+      "collapsed": false,
+      "extra": {}
+    },
+    {
+      "id": "node-1768573378933-894",
+      "parentId": "node-1768573318663-69",
+      "text": "Optimization Plan",
+      "type": "topic",
+      "position": {
+        "x": 1408.5311491329044,
+        "y": 333.02331415872806
+      },
+      "style": {
+        "color": "#1e40af",
+        "backgroundColor": "#eff6ff",
+        "fontSize": 14,
+        "fontWeight": "bold",
+        "fontStyle": "normal",
+        "shape": "rounded"
+      },
+      "collapsed": false,
+      "extra": {}
+    },
+    {
+      "id": "node-1768573385103-669",
+      "parentId": "node-1768569763493-248",
+      "text": "Vendor Selection",
+      "type": "topic",
+      "position": {
+        "x": 943.7396899647811,
+        "y": 685.3724506027888
+      },
+      "style": {
+        "color": "#166534",
+        "backgroundColor": "#f0fdf4",
+        "fontSize": 14,
+        "fontWeight": "bold",
+        "fontStyle": "normal",
+        "shape": "pill"
+      },
+      "collapsed": false,
+      "extra": {}
+    },
+    {
+      "id": "node-1768573391157-939",
+      "parentId": "node-1768573385103-669",
+      "text": "Demo Session",
+      "type": "topic",
+      "position": {
+        "x": 1142.5699760871971,
+        "y": 778.328814125341
+      },
+      "style": {
+        "color": "#166534",
+        "backgroundColor": "#f0fdf4",
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "fontStyle": "normal",
+        "shape": "pill"
+      },
+      "collapsed": false,
+      "extra": {}
+    },
+    {
+      "id": "node-1768573427977-653",
+      "parentId": "node-1768573385103-669",
+      "text": "Contract Negotiation",
+      "type": "topic",
+      "position": {
+        "x": 920.007501332489,
+        "y": 837.1516378935713
+      },
+      "style": {
+        "color": "#166534",
+        "backgroundColor": "#f0fdf4",
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "fontStyle": "normal",
+        "shape": "pill"
+      },
+      "collapsed": false,
+      "extra": {}
+    },
+    {
+      "id": "node-1768573442186-532",
+      "parentId": "node-1768573385103-669",
+      "text": "Market Research",
+      "type": "topic",
+      "position": {
+        "x": 744.7986258326805,
+        "y": 802.577774815279
+      },
+      "style": {
+        "color": "#166534",
+        "backgroundColor": "#f0fdf4",
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "fontStyle": "normal",
+        "shape": "pill"
+      },
+      "collapsed": false,
+      "extra": {}
+    },
+    {
+      "id": "node-1768573451751-64",
+      "parentId": "node-1768569763493-248",
+      "text": "Project Planing",
+      "type": "topic",
+      "position": {
+        "x": 638.8912294375812,
+        "y": 613.1291581311738
+      },
+      "style": {
+        "color": "#854d0e",
+        "backgroundColor": "#fefce8",
+        "fontSize": 14,
+        "fontWeight": "bold",
+        "fontStyle": "normal",
+        "shape": "diamond"
+      },
+      "collapsed": false,
+      "extra": {}
+    },
+    {
+      "id": "node-1768573462415-165",
+      "parentId": "node-1768573451751-64",
+      "text": "Requirements Gathering",
+      "type": "topic",
+      "position": {
+        "x": 313.1110016664948,
+        "y": 776.623985788688
+      },
+      "style": {
+        "color": "#854d0e",
+        "backgroundColor": "#fefce8",
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "fontStyle": "normal",
+        "shape": "diamond"
+      },
+      "collapsed": false,
+      "extra": {}
+    },
+    {
+      "id": "node-1768573472088-749",
+      "parentId": "node-1768573451751-64",
+      "text": "Timeline Definition",
+      "type": "topic",
+      "position": {
+        "x": 332.8895964739942,
+        "y": 681.6868277349062
+      },
+      "style": {
+        "color": "#854d0e",
+        "backgroundColor": "#fefce8",
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "fontStyle": "normal",
+        "shape": "diamond"
+      },
+      "collapsed": false,
+      "extra": {}
+    },
+    {
+      "id": "node-1768573482917-160",
+      "parentId": "node-1768573451751-64",
+      "text": "Budget Allocation",
+      "type": "topic",
+      "position": {
+        "x": 564.148195309736,
+        "y": 773.7951478181874
+      },
+      "style": {
+        "color": "#854d0e",
+        "backgroundColor": "#fefce8",
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "fontStyle": "normal",
+        "shape": "diamond"
+      },
+      "collapsed": false,
+      "extra": {}
+    },
+    {
+      "id": "node-1768573569587-567",
+      "parentId": "node-1768569763493-248",
+      "text": "Data Migration",
+      "type": "topic",
+      "position": {
+        "x": 1272.3484605272001,
+        "y": 627.743292471615
+      },
+      "style": {
+        "color": "#9a3412",
+        "backgroundColor": "#fff7ed",
+        "fontSize": 14,
+        "fontWeight": "bold",
+        "fontStyle": "normal",
+        "shape": "pill"
+      },
+      "collapsed": false,
+      "extra": {}
+    },
+    {
+      "id": "node-1768573581816-752",
+      "parentId": "node-1768573569587-567",
+      "text": "Data Audit",
+      "type": "topic",
+      "position": {
+        "x": 1513.8392708883614,
+        "y": 816.7573196709632
+      },
+      "style": {
+        "color": "#9a3412",
+        "backgroundColor": "#fff7ed",
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "fontStyle": "normal",
+        "shape": "pill"
+      },
+      "collapsed": false,
+      "extra": {}
+    },
+    {
+      "id": "node-1768573587862-346",
+      "parentId": "node-1768573569587-567",
+      "text": "Cleansing & Prep",
+      "type": "topic",
+      "position": {
+        "x": 1553.2893248798819,
+        "y": 706.5044741541154
+      },
+      "style": {
+        "color": "#9a3412",
+        "backgroundColor": "#fff7ed",
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "fontStyle": "normal",
+        "shape": "pill"
+      },
+      "collapsed": false,
+      "extra": {}
+    },
+    {
+      "id": "node-1768573596712-67",
+      "parentId": "node-1768573569587-567",
+      "text": "Migration Testing",
+      "type": "topic",
+      "position": {
+        "x": 1500.8537643848988,
+        "y": 573.7518677351147
+      },
+      "style": {
+        "color": "#9a3412",
+        "backgroundColor": "#fff7ed",
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "fontStyle": "normal",
+        "shape": "pill"
+      },
+      "collapsed": false,
+      "extra": {}
+    },
+    {
+      "id": "node-1768573645539-280",
+      "parentId": "node-1768569763493-248",
+      "text": "Go-Live",
+      "type": "topic",
+      "position": {
+        "x": 949.2603100352187,
+        "y": 476.62754939721117
+      },
+      "style": {
+        "color": "#1f2937",
+        "backgroundColor": "#ffffff",
+        "fontSize": 14,
+        "fontWeight": "bold",
+        "fontStyle": "normal",
+        "shape": "rect"
+      },
+      "collapsed": false,
+      "extra": {}
+    },
+    {
+      "id": "node-1768573651753-104",
+      "parentId": "node-1768573645539-280",
+      "text": "Communication Plan",
+      "type": "topic",
+      "position": {
+        "x": 696.1912912562562,
+        "y": 337.07810252445955
+      },
+      "style": {
+        "color": "#1f2937",
+        "backgroundColor": "#ffffff",
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "fontStyle": "normal",
+        "shape": "rect"
+      },
+      "collapsed": false,
+      "extra": {}
+    },
+    {
+      "id": "node-1768573660259-853",
+      "parentId": "node-1768573645539-280",
+      "text": "Support Setup",
+      "type": "topic",
+      "position": {
+        "x": 1083.5014753092296,
+        "y": 374.26496970397113
+      },
+      "style": {
+        "color": "#1f2937",
+        "backgroundColor": "#ffffff",
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "fontStyle": "normal",
+        "shape": "rect"
+      },
+      "collapsed": false,
+      "extra": {}
+    },
+    {
+      "id": "node-1768573668388-892",
+      "parentId": "node-1768573645539-280",
+      "text": "System Deployment",
+      "type": "topic",
+      "position": {
+        "x": 906.4288854978242,
+        "y": 349.8492936417955
+      },
+      "style": {
+        "color": "#1f2937",
+        "backgroundColor": "#ffffff",
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "fontStyle": "normal",
+        "shape": "rect"
+      },
+      "collapsed": false,
+      "extra": {}
+    },
+    {
+      "id": "node-1768573710202-341",
+      "parentId": "node-1768569763493-248",
+      "text": "Team Training",
+      "type": "topic",
+      "position": {
+        "x": 662.6515394728,
+        "y": 483.25670752838494
+      },
+      "style": {
+        "color": "#854d0e",
+        "backgroundColor": "#fefce8",
+        "fontSize": 14,
+        "fontWeight": "bold",
+        "fontStyle": "normal",
+        "shape": "rounded"
+      },
+      "collapsed": false,
+      "extra": {}
+    },
+    {
+      "id": "node-1768573735798-363",
+      "parentId": "node-1768573710202-341",
+      "text": "User Training",
+      "type": "topic",
+      "position": {
+        "x": 457.92930413637066,
+        "y": 349.0873723134498
+      },
+      "style": {
+        "color": "#854d0e",
+        "backgroundColor": "#fefce8",
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "fontStyle": "normal",
+        "shape": "rounded"
+      },
+      "collapsed": false,
+      "extra": {}
+    },
+    {
+      "id": "node-1768573741736-434",
+      "parentId": "node-1768573710202-341",
+      "text": "Admin Training",
+      "type": "topic",
+      "position": {
+        "x": 397.2045824298198,
+        "y": 453.01445371769904
+      },
+      "style": {
+        "color": "#854d0e",
+        "backgroundColor": "#fefce8",
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "fontStyle": "normal",
+        "shape": "rounded"
+      },
+      "collapsed": false,
+      "extra": {}
+    },
+    {
+      "id": "node-1768573747136-82",
+      "parentId": "node-1768573710202-341",
+      "text": "Documentation",
+      "type": "topic",
+      "position": {
+        "x": 388.639345980011,
+        "y": 565.896246630488
+      },
+      "style": {
+        "color": "#854d0e",
+        "backgroundColor": "#fefce8",
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "fontStyle": "normal",
+        "shape": "rounded"
+      },
+      "collapsed": false,
+      "extra": {}
+    }
+  ]
+}

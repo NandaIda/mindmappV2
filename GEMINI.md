@@ -12,9 +12,11 @@
 ### Component Hierarchy & Responsibilities
 
 #### `MindMapComponent` (`src/app/components/mindmap/`)
-- **Rendering Strategy:** Dual-layer rendering.
-  - **Layer 1 (SVG):** `<svg>` layer with `z-index: 0` handles Bezier curve connections (`<path>`).
-  - **Layer 2 (DOM):** `<div>` layer with `z-index: 1` handles interactive Node elements.
+- **Rendering Strategy:** Separated Viewport Architecture.
+  - **Fixed UI Layer:** Top-level container (not transformed) holding `SearchOverlay` and `LockIndicator` to ensure they stay fixed to the viewport.
+  - **Pannable Canvas:** The `.mindmap-container` div which receives the CSS `transform` (pan/zoom).
+    - **Layer 1 (SVG):** `<svg>` layer with `z-index: 0` handles Bezier curve connections.
+    - **Layer 2 (DOM):** `<div>` layer with `z-index: 1` handles interactive Node elements.
 - **Interaction Model:**
   - **Selection vs Editing:** Single-click handles selection only. Edit mode (contenteditable) is triggered via **Double-click**, **Enter** (when selected), or **F2**.
   - **Multi-Select Support (100% Keyboard-Driven):**
@@ -56,20 +58,38 @@
     - **Sibling Creation:** Siblings inherit from their sibling's style for visual consistency.
     - **Spacing & Jitter:** Increased distance (120px) and jitter (±80px) for more aesthetic curved connection lines.
 
+#### `KeyboardShortcutService` (`src/app/services/keyboard-shortcut.service.ts`)
+- **Responsibility:** Centralized keyboard event handler. Decouples key bindings from component logic.
+- **Pattern:** Translates `KeyboardEvent` -> `KeyCommand` enum.
+- **Key Features:**
+  - Robust `event.code` detection for Digit keys (handling Shift+Number correctly).
+  - Context-aware mapping (ignores certain shortcuts during text editing).
+
 #### `AppStateService` (`src/app/services/app-state.service.ts`)
-- **Data Structure:** Flat array of `MindMapNode` objects (`id`, `parentId`, `x`, `y`, `text`, `style?: NodeStyle`).
-- **Reactivity:** Angular `Signal<MindMapNode[]>` drives template updates.
+- **Data Structure:** Flat array of `MindMapNode`. Added `isCollapsed?: boolean` for folding support.
+- **Reactivity:** 
+  - `nodes`: Signal<MindMapNode[]> - Raw data.
+  - `visibleNodes`: Computed Signal - Returns only nodes whose ancestors are all expanded. **Views should bind to this.**
+  - `navigationLockLevel`: Signal<number | null> - Filters navigation to a specific depth.
+  - `globalCollapseLevel`: Signal<number | null> - Tracks current fold state.
+- **Conflict Resolution Logic:**
+  - **Folding vs. Locking:**
+    - If a Fold hides a Locked level -> Lock is cleared.
+    - If a Lock attempts to access a Hidden level -> Lock is blocked.
 - **Selection State:**
-  - `selectedNodeId`: Signal<string | null> - Focused node for keyboard navigation.
-  - `selectedNodeIds`: Signal<Set<string>> - Multi-select support (set of selected node IDs).
-  - Operations automatically work on all selected nodes when multiple are selected.
+  - `selectedNodeId`: Signal<string | null> - Focused node.
+  - `selectedNodeIds`: Signal<Set<string>> - Multi-select support.
 - **Business Logic:**
-  - **Node Creation (Jitter Algorithm):** Directional placement uses a random orthogonal offset (`+/- 30px`) to ensure non-linear SVG pathing.
-  - **Sibling Logic:** `addSiblingNode()` calculates vector from parent to current node to stack new nodes linearly (preventing overlap).
-  - **History Stack:** Command Pattern implementation via `undoHistory` / `redoHistory` (limit: 50).
-  - **Root Initialization:** Root node created with empty text (`''`) to trigger placeholder.
+  - **Structure:** `promoteNode` (Grandchild -> Child) and `demoteNode` (Child -> Grandchild) logic.
+  - **Node Creation:** Jitter Algorithm for organic placement.
+  - **History:** Command Pattern (undo/redo).
 
 ### CSS/SCSS Patterns
+- **Visual Feedback:**
+  - `.node.selected`: Vibrant Red (#ef4444) border (5px) + strong glow. High visibility for keyboard users.
+  - `.node.collapsed::before`: Renders `(+)` badge.
+  - `.node.lock-dimmed`: Grayscale/Opacity reduction for nodes outside the locked navigation level.
+  - `.node.lock-active`: Double border for nodes in the locked level.
 - **Handle Visibility:** `.node:hover .node-handles { opacity: 1 }`.
 - **Invisible Bridge Pattern:** Handles use `::after` pseudo-elements to bridge the physical gap between node and handle, preventing `mouseleave` events during cursor traversal.
 - **Placeholder Styling:** `:empty::before` with `content: attr(data-placeholder); color: #9ca3af; pointer-events: none;`.
