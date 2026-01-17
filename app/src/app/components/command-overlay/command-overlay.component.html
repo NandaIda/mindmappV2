@@ -1,0 +1,17 @@
+<div class="command-overlay-container">
+  <div class="command-bar" [class.has-error]="!!errorMsg()">
+    <span class="cmd-prompt">VIM</span>
+    <input 
+      #commandInput
+      type="text" 
+      class="command-input" 
+      [(ngModel)]="commandQuery"
+      (keydown)="onKeyDown($event)"
+      spellcheck="false"
+      autocomplete="off"
+    >
+    @if (errorMsg()) {
+      <div class="error-badge">{{ errorMsg() }}</div>
+    }
+  </div>
+</div>

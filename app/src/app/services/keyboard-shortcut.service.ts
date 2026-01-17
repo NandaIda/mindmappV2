@@ -52,6 +52,8 @@ export enum KeyCommand {
   // File Operations
   EXPORT = 'EXPORT',
   IMPORT = 'IMPORT',
+  EXPORT_MERMAID = 'EXPORT_MERMAID', // Ctrl+Alt+E
+  IMPORT_MERMAID = 'IMPORT_MERMAID', // Ctrl+Alt+I
   HELP = 'HELP',
   
   // Styling
@@ -68,7 +70,9 @@ export enum KeyCommand {
   TOGGLE_SELECTION = 'TOGGLE_SELECTION', // 'm'
   CLEAR_SELECTION = 'CLEAR_SELECTION',   // Escape
   SELECT_ALL = 'SELECT_ALL',              // Ctrl+A
-  SEARCH = 'SEARCH'                      // /
+  SELECT_SUBTREE = 'SELECT_SUBTREE',      // s
+  SEARCH = 'SEARCH',                      // /
+  COMMAND_MODE = 'COMMAND_MODE'           // :
 }
 
 @Injectable({
@@ -138,6 +142,13 @@ export class KeyboardShortcutService {
       if (cmdOrCtrl) return KeyCommand.EXPORT;
       // Note: Shift+S is Cycle Shape (handled below)
     }
+    if (key === 'e' || key === 'E') {
+      if (cmdOrCtrl && alt) return KeyCommand.EXPORT_MERMAID;
+    }
+    if (key === 'i' || key === 'I') {
+      if (cmdOrCtrl && alt) return KeyCommand.IMPORT_MERMAID;
+    }
+
     if ((key === 'o' || key === 'O') && cmdOrCtrl) return KeyCommand.IMPORT;
     if ((key === 'k' || key === 'K') && cmdOrCtrl) return KeyCommand.HELP;
 
@@ -181,6 +192,10 @@ export class KeyboardShortcutService {
     if (key === 'f' || key === 'F' || key === 'c' || key === 'C') {
       return KeyCommand.TOGGLE_FOLD;
     }
+    if (key === 's' || key === 'S') {
+      if (!cmdOrCtrl && !shift) return KeyCommand.SELECT_SUBTREE;
+    }
+    if (key === ':') return KeyCommand.COMMAND_MODE;
     if (key === 'm' || key === 'M') return KeyCommand.TOGGLE_SELECTION;
     if (key === '/') return KeyCommand.SEARCH;
     if (key === 'Escape') return KeyCommand.CLEAR_SELECTION;

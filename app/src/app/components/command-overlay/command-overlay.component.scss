@@ -1,0 +1,66 @@
+.command-overlay-container {
+  position: fixed;
+  bottom: 80px; /* Above navbar */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5000;
+  width: 100%;
+  max-width: 400px;
+  pointer-events: none; /* Let clicks pass through around it */
+}
+
+.command-bar {
+  background: rgba(31, 41, 55, 0.95); /* Dark gray/black like VIM status bar */
+  color: #e5e7eb;
+  padding: 8px 16px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  pointer-events: auto;
+  border: 1px solid rgba(255,255,255,0.1);
+  font-family: 'Consolas', 'Monaco', monospace;
+  transition: all 0.1s;
+
+  &.has-error {
+    border-color: #ef4444;
+    animation: shake 0.3s;
+  }
+}
+
+.cmd-prompt {
+  font-weight: bold;
+  color: #10b981; /* Green prompt */
+  margin-right: 10px;
+  font-size: 0.9em;
+  padding: 2px 6px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 4px;
+}
+
+.command-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: white;
+  flex: 1;
+  font-family: inherit;
+  font-size: 1.1rem;
+  caret-color: #10b981;
+}
+
+.error-badge {
+  font-size: 0.75rem;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}

@@ -5,11 +5,12 @@ import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { HelpModalComponent } from '../help-modal/help-modal.component';
 import { KeyboardShortcutService, KeyCommand } from '../../services/keyboard-shortcut.service';
 import { SearchOverlayComponent } from '../search-overlay/search-overlay.component';
+import { CommandOverlayComponent } from '../command-overlay/command-overlay.component';
 
 @Component({
   selector: 'app-mindmap',
   standalone: true,
-  imports: [SearchOverlayComponent],
+  imports: [SearchOverlayComponent, CommandOverlayComponent],
   templateUrl: './mindmap.component.html',
   styleUrl: './mindmap.component.scss'
 })
@@ -75,6 +76,7 @@ import { SearchOverlayComponent } from '../search-overlay/search-overlay.compone
   
   // Search state
   isSearchOpen = signal(false);
+  isCommandOpen = signal(false);
 
   // Keyboard node movement
   private moveInterval: any = null;
@@ -301,7 +303,11 @@ import { SearchOverlayComponent } from '../search-overlay/search-overlay.compone
       case KeyCommand.DELETE_NODE:
         if (this.appState.selectedNodeId()) {
           event.preventDefault();
-          this.handleSmartDelete();
+          if (event.key === 'd' || event.key === 'D') {
+            this.appState.deleteDescendants(this.appState.selectedNodeId()!);
+          } else {
+            this.handleSmartDelete();
+          }
         }
         break;
 
@@ -320,9 +326,17 @@ import { SearchOverlayComponent } from '../search-overlay/search-overlay.compone
         event.preventDefault();
         this.fileService.export();
         break;
+      case KeyCommand.EXPORT_MERMAID:
+        event.preventDefault();
+        this.fileService.exportMermaid();
+        break;
       case KeyCommand.IMPORT:
         event.preventDefault();
         this.uploadMindMap();
+        break;
+      case KeyCommand.IMPORT_MERMAID:
+        event.preventDefault();
+        this.uploadMermaidMap();
         break;
       case KeyCommand.HELP:
         event.preventDefault();
@@ -371,6 +385,15 @@ import { SearchOverlayComponent } from '../search-overlay/search-overlay.compone
           }
         }
         break;
+      case KeyCommand.SELECT_SUBTREE:
+        if (!isEditingNode) {
+          event.preventDefault();
+          const selectedId = this.appState.selectedNodeId();
+          if (selectedId) {
+            this.appState.selectSubtree(selectedId);
+          }
+        }
+        break;
       case KeyCommand.CLEAR_SELECTION:
         if (!isEditingNode) {
           event.preventDefault();
@@ -388,6 +411,13 @@ import { SearchOverlayComponent } from '../search-overlay/search-overlay.compone
         if (!isEditingNode) {
           event.preventDefault();
           this.isSearchOpen.set(true);
+        }
+        break;
+      
+      case KeyCommand.COMMAND_MODE:
+        if (!isEditingNode) {
+          event.preventDefault();
+          this.isCommandOpen.set(true);
         }
         break;
     }
@@ -797,6 +827,31 @@ import { SearchOverlayComponent } from '../search-overlay/search-overlay.compone
           .catch((error) => {
             console.error('Error importing mind map:', error);
             alert('Error importing mind map: ' + error.message);
+          });
+      }
+    };
+    input.click();
+  }
+
+  /**
+   * Opens file dialog to load a Mermaid file
+   */
+  uploadMermaidMap(): void {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.mmd,.txt';
+    input.onchange = (event) => {
+      const files = (event.target as HTMLInputElement).files;
+      if (files && files.length > 0) {
+        this.fileService.importMermaid(files[0])
+          .then(() => {
+            // Auto-spread after import since positions are random
+            this.appState.autoSpreadNodes();
+            setTimeout(() => this.fitView(), 100);
+          })
+          .catch((error) => {
+            console.error('Error importing mermaid map:', error);
+            alert('Error importing mermaid map: ' + error.message);
           });
       }
     };

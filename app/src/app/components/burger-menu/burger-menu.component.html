@@ -11,17 +11,31 @@
   
   <ul ngbDropdownMenu class="dropdown-menu">
     <li>
-      <button ngbDropdownItem (click)="downloadMindMap()">
-        <i class="fas fa-download me-2"></i>
-        Save
+      <button ngbDropdownItem (click)="uploadMindMap()">
+        <i class="fas fa-upload me-2"></i>
+        Load (.mind)
       </button>
     </li>
     <li>
-      <button ngbDropdownItem (click)="uploadMindMap()">
-        <i class="fas fa-upload me-2"></i>
-        Load
+      <button ngbDropdownItem (click)="downloadMindMap()">
+        <i class="fas fa-download me-2"></i>
+        Save (.mind)
       </button>
     </li>
+    <li class="dropdown-divider"></li>
+    <li>
+      <button ngbDropdownItem (click)="importMermaid()">
+        <i class="fas fa-file-import me-2"></i>
+        Import Mermaid
+      </button>
+    </li>
+    <li>
+      <button ngbDropdownItem (click)="exportMermaid()">
+        <i class="fas fa-file-export me-2"></i>
+        Export Mermaid
+      </button>
+    </li>
+    <li class="dropdown-divider"></li>
     <li>
       <button ngbDropdownItem (click)="resetMap()">
         <i class="fas fa-trash-alt me-2"></i>

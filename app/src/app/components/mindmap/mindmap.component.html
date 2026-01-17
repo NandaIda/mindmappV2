@@ -6,6 +6,12 @@
   ></app-search-overlay>
 }
 
+@if (isCommandOpen()) {
+  <app-command-overlay
+    (close)="isCommandOpen.set(false)"
+  ></app-command-overlay>
+}
+
 @if (appState.navigationLockLevel() !== null) {
   <div class="lock-indicator-overlay">
     Locked to Level {{ appState.navigationLockLevel() }}

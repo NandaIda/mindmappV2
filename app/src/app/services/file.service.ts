@@ -160,4 +160,139 @@ export class FileService {
     // This method is a placeholder for the navbar to call after import
     // The actual implementation will be handled in the navbar component
   }
+
+  /**
+   * Exports the current mind map to a Mermaid (.mmd) file
+   */
+  exportMermaid(): void {
+    const nodes = this.appState.nodes();
+    if (nodes.length === 0) return;
+
+    let mermaidContent = 'mindmap\n';
+    
+    // Find root
+    const root = nodes.find(n => !n.parentId);
+    if (!root) return;
+
+    // Helper to escape text for Mermaid
+    const escapeText = (text: string) => {
+      // Mermaid mindmaps don't like parentheses inside the text without quotes
+      return text.replace(/[()]/g, '');
+    };
+
+    // Recursive traverse
+    const traverse = (nodeId: string, depth: number) => {
+      const node = nodes.find(n => n.id === nodeId);
+      if (!node) return;
+
+      const indent = '  '.repeat(depth + 1);
+      
+      // Determine shape syntax (Mermaid mindmap shapes: (), [], etc are not fully standard across all parsers yet, 
+      // but standard indentation is robust).
+      // Let's stick to simple text for compatibility, or basic shapes if supported.
+      // Standard Mermaid mindmap just uses indentation.
+      
+      let line = `${indent}${escapeText(node.text) || 'New Idea'}`;
+      
+      // Add ID or class? Mermaid mindmap is simple.
+      mermaidContent += `${line}\n`;
+
+      const children = nodes.filter(n => n.parentId === nodeId);
+      children.forEach(child => traverse(child.id, depth + 1));
+    };
+
+    traverse(root.id, 0);
+
+    // Download
+    const blob = new Blob([mermaidContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mindmap-${new Date().toISOString().split('T')[0]}.mmd`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Imports a Mermaid (.mmd) file
+   */
+  importMermaid(file: File): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = (event) => {
+        try {
+          const content = event.target?.result as string;
+          const lines = content.split('\n');
+          
+          if (!lines[0].trim().startsWith('mindmap')) {
+            throw new Error('Invalid Mermaid file: Must start with "mindmap"');
+          }
+
+          const newNodes: MindMapNode[] = [];
+          const stack: { id: string, indent: number }[] = [];
+          const viewportWidth = window.innerWidth;
+          const viewportHeight = window.innerHeight;
+
+          // Helper to calculate indentation level (2 spaces = 1 level)
+          const getIndent = (line: string) => {
+            const match = line.match(/^(\s*)/);
+            return match ? match[1].length : 0;
+          };
+
+          for (let i = 1; i < lines.length; i++) {
+            const line = lines[i];
+            if (!line.trim()) continue;
+
+            const indent = getIndent(line);
+            const text = line.trim();
+            const id = this.appState.generateId(); // Use service's generator
+
+            // Determine parent
+            // We need to find the last node in the stack with indentation < current indent
+            while (stack.length > 0 && stack[stack.length - 1].indent >= indent) {
+              stack.pop();
+            }
+
+            const parentId = stack.length > 0 ? stack[stack.length - 1].id : null;
+
+            // Random position for initial import
+            const x = (viewportWidth / 2) + (Math.random() - 0.5) * 500;
+            const y = (viewportHeight / 2) + (Math.random() - 0.5) * 500;
+
+            const newNode: any = { // Cast to any to match internal structure
+              id,
+              text,
+              parentId,
+              x, 
+              y,
+              style: {
+                shape: 'rounded',
+                backgroundColor: '#ffffff',
+                color: '#000000'
+              }
+            };
+
+            newNodes.push(newNode);
+            stack.push({ id, indent });
+          }
+
+          this.appState.nodes.set(newNodes);
+          
+          // Select root
+          const root = newNodes.find(n => !n.parentId);
+          if (root) this.appState.selectedNodeId.set(root.id);
+
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
+      };
+
+      reader.readAsText(file);
+    });
+  }
 }
+

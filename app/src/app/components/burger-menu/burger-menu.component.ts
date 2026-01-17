@@ -22,6 +22,16 @@ export class BurgerMenuComponent {
     this.fileService.export();
   }
 
+  exportMermaid() {
+    this.fileService.exportMermaid();
+  }
+
+  importMermaid() {
+    if (this.mindmap) {
+      this.mindmap.uploadMermaidMap();
+    }
+  }
+
   uploadMindMap() {
     const input = document.createElement('input');
     input.type = 'file';

@@ -374,6 +374,100 @@ export class AppStateService {
   }
 
   /**
+   * Collapses nodes at a specific relative depth from the target node.
+   * c1 -> Collapse target node (hides children).
+   * c2 -> Collapse children (hides grandchildren).
+   */
+  collapseRelative(rootId: string, relativeDepth: number): void {
+    if (relativeDepth < 1) return;
+
+    const rootDepth = this.getNodeDepth(rootId);
+    const targetDepth = rootDepth + (relativeDepth - 1);
+
+    // Save state
+    const nodesBefore = [...this.nodes()];
+
+    this.nodes.update(nodes =>
+      nodes.map(n => {
+        // Only affect descendants or self
+        if (n.id === rootId || this.isDescendant(n.id, rootId)) {
+          const depth = this.getNodeDepth(n.id);
+          if (depth === targetDepth) {
+            return { ...n, isCollapsed: true };
+          }
+        }
+        return n;
+      })
+    );
+
+    this.addToHistory('update', nodesBefore);
+  }
+
+  /**
+   * Deletes nodes at a specific relative depth from the target node.
+   * d1 -> Delete children.
+   * d2 -> Delete grandchildren.
+   */
+  pruneRelative(rootId: string, relativeDepth: number): void {
+    if (relativeDepth < 1) return;
+
+    const rootDepth = this.getNodeDepth(rootId);
+    const targetDepth = rootDepth + relativeDepth;
+
+    // Save state
+    const nodesBefore = [...this.nodes()];
+
+    const idsToDelete = new Set<string>();
+
+    this.nodes().forEach(n => {
+      if (this.isDescendant(n.id, rootId)) {
+        const depth = this.getNodeDepth(n.id);
+        if (depth === targetDepth) {
+          idsToDelete.add(n.id);
+        }
+      }
+    });
+
+    // Expand deletion set to include subtrees of target nodes
+    const fullDeleteSet = new Set(idsToDelete);
+    this.nodes().forEach(n => {
+      for (const deleteId of idsToDelete) {
+        if (this.isDescendant(n.id, deleteId)) {
+          fullDeleteSet.add(n.id);
+        }
+      }
+    });
+
+    const nodesToKeep = this.nodes().filter(node => !fullDeleteSet.has(node.id));
+    this.nodes.set(nodesToKeep);
+    
+    this.addToHistory('delete', nodesBefore);
+  }
+
+  /**
+   * Deletes all descendants of a node, keeping the node itself.
+   */
+  deleteDescendants(rootId: string): void {
+    const nodesBefore = [...this.nodes()];
+    
+    const idsToDelete = new Set<string>();
+    this.nodes().forEach(n => {
+      if (this.isDescendant(n.id, rootId)) {
+        idsToDelete.add(n.id);
+      }
+    });
+
+    idsToDelete.delete(rootId);
+
+    if (idsToDelete.size === 0) return;
+
+    const nodesToKeep = this.nodes().filter(node => !idsToDelete.has(node.id));
+    this.nodes.set(nodesToKeep);
+    
+    this.addToHistory('delete', nodesBefore);
+  }
+
+  /**
    * Sets the global collapse level (Ctrl + Number)
    * Collapses all nodes at depth >= level
    */
@@ -529,6 +623,55 @@ export class AppStateService {
     if (!this.selectedNodeId() || !allIds.has(this.selectedNodeId()!)) {
       this.selectedNodeId.set(this.nodes()[0]?.id || null);
     }
+  }
+
+  /**
+   * Selects a node and all its descendants (Subtree Selection)
+   */
+  selectSubtree(rootId: string): void {
+    const subtreeIds = new Set<string>();
+    
+    // Helper to recursively collect IDs
+    const collect = (nodeId: string) => {
+      subtreeIds.add(nodeId);
+      const children = this.nodes().filter(n => n.parentId === nodeId);
+      children.forEach(child => collect(child.id));
+    };
+
+    collect(rootId);
+    this.selectedNodeIds.set(subtreeIds);
+    this.selectedNodeId.set(rootId); // Keep root focused
+  }
+
+  /**
+   * Selects descendants up to a specific relative depth.
+   * s1 -> Select children.
+   * s2 -> Select children + grandchildren.
+   */
+  selectRelative(rootId: string, relativeDepth: number): void {
+    if (relativeDepth < 1) return;
+
+    const rootDepth = this.getNodeDepth(rootId);
+    const maxDepth = rootDepth + relativeDepth;
+    const selection = new Set<string>();
+
+    // Always include root? Usually VIM selection includes the start.
+    selection.add(rootId);
+
+    const collect = (nodeId: string) => {
+      const children = this.nodes().filter(n => n.parentId === nodeId);
+      children.forEach(child => {
+        const depth = this.getNodeDepth(child.id);
+        if (depth <= maxDepth) {
+          selection.add(child.id);
+          collect(child.id);
+        }
+      });
+    };
+
+    collect(rootId);
+    this.selectedNodeIds.set(selection);
+    this.selectedNodeId.set(rootId);
   }
 
   /**
